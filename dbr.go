@@ -70,12 +70,6 @@ func (conn *Connection) beginTx() (*sql.Tx, error) {
 	return conn.Begin()
 }
 
-// Ensure that tx and session are session runner
-var (
-	_ SessionRunner = (*Tx)(nil)
-	_ SessionRunner = (*Session)(nil)
-)
-
 // SessionRunner can do anything that a Session can except start a transaction.
 type SessionRunner interface {
 	Select(column ...string) *SelectBuilder
@@ -98,7 +92,7 @@ type runner interface {
 
 func exec(runner runner, log EventReceiver, builder Builder, d Dialect) (sql.Result, error) {
 	i := interpolator{
-		Buffer:       NewBuffer(),
+		Buffer:       newBuffer(),
 		Dialect:      d,
 		IgnoreBinary: true,
 	}
@@ -129,7 +123,7 @@ func exec(runner runner, log EventReceiver, builder Builder, d Dialect) (sql.Res
 
 func query(runner runner, log EventReceiver, builder Builder, d Dialect, dest interface{}) (int, error) {
 	i := interpolator{
-		Buffer:       NewBuffer(),
+		Buffer:       newBuffer(),
 		Dialect:      d,
 		IgnoreBinary: true,
 	}
