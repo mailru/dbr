@@ -43,3 +43,10 @@ func (d postgreSQL) OnConflict(constraint string) string {
 func (d postgreSQL) Proposed(column string) string {
 	return fmt.Sprintf("EXCLUDED.%s", d.QuoteIdent(column))
 }
+
+func (d postgreSQL) Limit(offset, limit int64) string {
+	if offset < 0 {
+		return fmt.Sprintf("LIMIT %d", limit)
+	}
+	return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
+}

@@ -72,3 +72,10 @@ func (d mysql) OnConflict(_ string) string {
 func (d mysql) Proposed(column string) string {
 	return fmt.Sprintf("VALUES(%s)", d.QuoteIdent(column))
 }
+
+func (d mysql) Limit(offset, limit int64) string {
+	if offset < 0 {
+		return fmt.Sprintf("LIMIT %d", limit)
+	}
+	return fmt.Sprintf("LIMIT %d,%d", offset, limit)
+}
