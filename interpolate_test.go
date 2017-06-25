@@ -154,14 +154,16 @@ func TestCommonSQLInjections(t *testing.T) {
 	for _, sess := range testSession {
 		for _, injectionAttempt := range strings.Split(injectionAttempts, "\n") {
 			// Create a user with the attempted injection as the email address
+			id := nextID()
 			_, err := sess.InsertInto("dbr_people").
 				Pair("name", injectionAttempt).
+				Pair("id", id).
 				Exec()
 			assert.NoError(t, err)
 
 			// SELECT the name back and ensure it's equal to the injection attempt
 			var name string
-			err = sess.Select("name").From("dbr_people").OrderDir("id", false).Limit(1).LoadValue(&name)
+			err = sess.Select("name").From("dbr_people").Where(Eq("id", id)).LoadValue(&name)
 			assert.Equal(t, injectionAttempt, name)
 		}
 	}

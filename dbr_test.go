@@ -2,7 +2,6 @@ package dbr
 
 import (
 	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -12,6 +11,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	_ "github.com/mailru/go-clickhouse"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -32,9 +32,10 @@ func nextID() int64 {
 }
 
 const (
-	mysqlDSN    = "root@unix(/tmp/mysql.sock)/uservoice_test?charset=utf8"
-	postgresDSN = "postgres://postgres@localhost:5432/uservoice_test?sslmode=disable"
-	sqlite3DSN  = ":memory:"
+	mysqlDSN      = "root@unix(/tmp/mysql.sock)/dbr_test?charset=utf8"
+	postgresDSN   = "postgres://postgres@localhost:5432/dbr_test?sslmode=disable"
+	sqlite3DSN    = ":memory:"
+	clickhouseDSN = "http://localhost:8123/dbr_test"
 )
 
 func createSession(driver, dsn string) *Session {
@@ -46,6 +47,8 @@ func createSession(driver, dsn string) *Session {
 		testDSN = os.Getenv("DBR_TEST_POSTGRES_DSN")
 	case "sqlite3":
 		testDSN = os.Getenv("DBR_TEST_SQLITE3_DSN")
+	case "clickhouse":
+		testDSN = os.Getenv("DBR_TEST_CLICKHOUSE_DSN")
 	}
 	if testDSN != "" {
 		dsn = testDSN
@@ -64,9 +67,10 @@ var (
 	postgresSession       = createSession("postgres", postgresDSN)
 	postgresBinarySession = createSession("postgres", postgresDSN+"&binary_parameters=yes")
 	sqlite3Session        = createSession("sqlite3", sqlite3DSN)
+	clickhouseSession     = createSession("clickhouse", clickhouseDSN)
 
 	// all test sessions should be here
-	testSession = []*Session{mysqlSession, postgresSession, sqlite3Session}
+	testSession = []*Session{mysqlSession, postgresSession, sqlite3Session, clickhouseSession}
 )
 
 type person struct {
@@ -85,35 +89,65 @@ type nullTypedRecord struct {
 }
 
 func reset(sess *Session) {
-	var autoIncrementType string
+	var stmts []string
 	switch sess.Dialect {
 	case dialect.MySQL:
-		autoIncrementType = "serial PRIMARY KEY"
+		stmts = []string{
+			`DROP TABLE IF EXISTS dbr_people`,
+			`CREATE TABLE dbr_people(id SERIAL PRIMARY KEY, name varchar(255) NOT NULL, email varchar(255))`,
+			`DROP TABLE IF EXISTS null_types`,
+			`CREATE TABLE null_types(
+				id SERIAL PRIMARY KEY,
+				string_val varchar(255) NULL,
+				int64_val integer NULL,
+				float64_val float NULL,
+				time_val timestamp NULL,
+				bool_val bool NULL
+			)`,
+			`DROP TABLE IF EXISTS dbr_keys`,
+			`CREATE TABLE dbr_keys (key_value varchar(255) PRIMARY KEY, val_value varchar(255))`,
+		}
 	case dialect.PostgreSQL:
-		autoIncrementType = "serial PRIMARY KEY"
+		stmts = []string{
+			"DROP TABLE IF EXISTS dbr_people",
+			"CREATE TABLE dbr_people(id SERIAL PRIMARY KEY, name varchar(255) NOT NULL, email varchar(255))",
+			`DROP TABLE IF EXISTS null_types`,
+			`CREATE TABLE null_types(
+				id SERIAL PRIMARY KEY,
+				string_val varchar(255) NULL,
+				int64_val integer NULL,
+				float64_val float NULL,
+				time_val timestamp NULL,
+				bool_val bool NULL
+			)`,
+			`DROP TABLE IF EXISTS dbr_keys`,
+			`CREATE TABLE dbr_keys (key_value varchar(255) PRIMARY KEY, val_value varchar(255))`,
+		}
 	case dialect.SQLite3:
-		autoIncrementType = "integer PRIMARY KEY"
+		stmts = []string{
+			"DROP TABLE IF EXISTS dbr_people",
+			"CREATE TABLE dbr_people(id INTEGER PRIMARY KEY, name varchar(255) NOT NULL, email varchar(255))",
+			`DROP TABLE IF EXISTS null_types`,
+			`CREATE TABLE null_types(
+				id INTEGER PRIMARY KEY,
+				string_val varchar(255) NULL,
+				int64_val integer NULL,
+				float64_val float NULL,
+				time_val timestamp NULL,
+				bool_val bool NULL
+			)`,
+			`DROP TABLE IF EXISTS dbr_keys`,
+			`CREATE TABLE dbr_keys (key_value varchar(255) PRIMARY KEY, val_value varchar(255))`,
+		}
+	case dialect.ClickHouse:
+		stmts = []string{
+			"DROP TABLE IF EXISTS dbr_people",
+			"CREATE TABLE dbr_people(id Int32, name String, email String) Engine=Memory",
+			`DROP TABLE IF EXISTS dbr_keys`,
+			`CREATE TABLE dbr_keys (key_value String, val_value String) Engine=Memory`,
+		}
 	}
-	for _, v := range []string{
-		`DROP TABLE IF EXISTS dbr_people`,
-		fmt.Sprintf(`CREATE TABLE dbr_people (
-			id %s,
-			name varchar(255) NOT NULL,
-			email varchar(255)
-		)`, autoIncrementType),
-
-		`DROP TABLE IF EXISTS null_types`,
-		fmt.Sprintf(`CREATE TABLE null_types (
-			id %s,
-			string_val varchar(255) NULL,
-			int64_val integer NULL,
-			float64_val float NULL,
-			time_val timestamp NULL ,
-			bool_val bool NULL
-		)`, autoIncrementType),
-		`DROP TABLE IF EXISTS dbr_keys`,
-		`CREATE TABLE dbr_keys (key_value varchar(255) PRIMARY KEY, val_value varchar(255))`,
-	} {
+	for _, v := range stmts {
 		_, err := sess.Exec(v)
 		if err != nil {
 			log.Fatalf("Failed to execute statement: %s, Got error: %s", v, err)
@@ -155,7 +189,7 @@ func TestBasicCRUD(t *testing.T) {
 			Email: "jonathan@uservoice.com",
 		}
 		insertColumns := []string{"name", "email"}
-		if sess.Dialect == dialect.PostgreSQL {
+		if sess.Dialect == dialect.PostgreSQL || sess.Dialect == dialect.ClickHouse {
 			jonathan.ID = nextID()
 			insertColumns = []string{"id", "name", "email"}
 		}
@@ -164,8 +198,9 @@ func TestBasicCRUD(t *testing.T) {
 		assert.NoError(t, err)
 
 		rowsAffected, err := result.RowsAffected()
-		assert.NoError(t, err)
-		assert.EqualValues(t, 1, rowsAffected)
+		if err == nil {
+			assert.EqualValues(t, 1, rowsAffected)
+		}
 
 		assert.True(t, jonathan.ID > 0)
 		// select
@@ -188,6 +223,10 @@ func TestBasicCRUD(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(ids))
 
+		if sess.Dialect == dialect.ClickHouse {
+			// clickhouse does not support update/delete
+			continue
+		}
 		// update
 		result, err = sess.Update("dbr_people").Where(Eq("id", jonathan.ID)).Set("name", "jonathan1").Exec()
 		assert.NoError(t, err)
@@ -217,7 +256,7 @@ func TestBasicCRUD(t *testing.T) {
 
 func TestOnConflict(t *testing.T) {
 	for _, sess := range testSession {
-		if sess.Dialect == dialect.SQLite3 {
+		if sess.Dialect == dialect.SQLite3 || sess.Dialect == dialect.ClickHouse {
 			continue
 		}
 		for i := 0; i < 2; i++ {

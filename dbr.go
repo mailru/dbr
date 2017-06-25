@@ -27,6 +27,8 @@ func Open(driver, dsn string, log EventReceiver) (*Connection, error) {
 		d = dialect.PostgreSQL
 	case "sqlite3":
 		d = dialect.SQLite3
+	case "clickhouse":
+		d = dialect.ClickHouse
 	default:
 		return nil, ErrNotSupported
 	}

@@ -1,6 +1,8 @@
 package dbr
 
 import (
+	"github.com/mailru/dbr/dialect"
+
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,8 +20,10 @@ func TestTransactionCommit(t *testing.T) {
 		assert.NoError(t, err)
 
 		rowsAffected, err := result.RowsAffected()
-		assert.NoError(t, err)
-		assert.EqualValues(t, 1, rowsAffected)
+		// not all drivers supports RowsAffected
+		if err == nil {
+			assert.EqualValues(t, 1, rowsAffected)
+		}
 
 		err = tx.Commit()
 		assert.NoError(t, err)
@@ -32,6 +36,10 @@ func TestTransactionCommit(t *testing.T) {
 
 func TestTransactionRollback(t *testing.T) {
 	for _, sess := range testSession {
+		if sess.Dialect == dialect.ClickHouse {
+			// clickhouse does not support transactions
+			continue
+		}
 		tx, err := sess.Begin()
 		assert.NoError(t, err)
 		defer tx.RollbackUnlessCommitted()
