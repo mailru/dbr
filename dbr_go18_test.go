@@ -6,14 +6,24 @@ import (
 	"context"
 	"testing"
 
+	"github.com/mailru/dbr/dialect"
+
+	"database/sql"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestContextCancel(t *testing.T) {
 	// context support is implemented for PostgreSQL
-	checkSessionContext(t, postgresSession.Connection)
-	checkTxQueryContext(t, postgresSession.Connection)
-	checkTxExecContext(t, postgresSession.Connection)
+	for _, sess := range testSession {
+		if sess.Dialect == dialect.SQLite3 {
+			continue
+		}
+		checkSessionContext(t, postgresSession.Connection)
+		if sess.Dialect != dialect.ClickHouse {
+			checkTxQueryContext(t, postgresSession.Connection)
+			checkTxExecContext(t, postgresSession.Connection)
+		}
+	}
 }
 
 func checkSessionContext(t *testing.T, conn *Connection) {
@@ -39,7 +49,9 @@ func checkTxQueryContext(t *testing.T, conn *Connection) {
 	cancel()
 	_, err = tx.SelectBySql("SELECT 1").ReturnInt64()
 	assert.EqualError(t, err, "context canceled")
-	assert.NoError(t, tx.Rollback())
+	err = tx.Rollback()
+	// context cancel may cause transaction rollback automatically
+	assert.True(t, err == nil || err == sql.ErrTxDone)
 }
 
 func checkTxExecContext(t *testing.T, conn *Connection) {

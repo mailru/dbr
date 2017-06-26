@@ -289,6 +289,7 @@ type Builder interface {
 * MySQL
 * PostgreSQL
 * SQLite3
+* ClickHouse
 
 These packages were developed by the [engineering team](https://eng.uservoice.com) at [UserVoice](https://www.uservoice.com) and currently power much of its infrastructure and tech stack.
 
@@ -305,3 +306,4 @@ Authors:
 
 Contributors:
 * Paul Bergeron -- [https://github.com/dinedal](https://github.com/dinedal) - SQLite dialect
+* Bulat Gaifullin -- [https://github.com/bgaifullin](https://github.com/bgaifullin) - ClickHouse dialect

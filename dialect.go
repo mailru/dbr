@@ -13,4 +13,5 @@ type Dialect interface {
 	Placeholder(n int) string
 	OnConflict(constraint string) string
 	Proposed(column string) string
+	Limit(offset, limit int64) string
 }

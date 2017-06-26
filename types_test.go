@@ -29,6 +29,10 @@ func TestNullTypesScanning(t *testing.T) {
 		},
 	} {
 		for _, sess := range testSession {
+			if sess.Dialect == dialect.ClickHouse {
+				// clickhouse does not support null type
+				continue
+			}
 			test.in.ID = nextID()
 			_, err := sess.InsertInto("null_types").Columns("id", "string_val", "int64_val", "float64_val", "time_val", "bool_val").Record(test.in).Exec()
 			assert.NoError(t, err)

@@ -150,7 +150,7 @@ func (b *SelectBuilder) Limit(n uint64) *SelectBuilder {
 	return b
 }
 
-// Offset adds OFFSET
+// Offset adds OFFSET, works only if LIMIT is set
 func (b *SelectBuilder) Offset(n uint64) *SelectBuilder {
 	b.SelectStmt.Offset(n)
 	return b

@@ -6,17 +6,20 @@ import (
 	"time"
 )
 
-type mysql struct{}
+const (
+	clickhouseTimeFormat = "2006-01-02 15:04:05"
+)
 
-func (d mysql) QuoteIdent(s string) string {
+type clickhouse struct{}
+
+func (d clickhouse) QuoteIdent(s string) string {
 	return quoteIdent(s, "`")
 }
 
-func (d mysql) EncodeString(s string) string {
+func (d clickhouse) EncodeString(s string) string {
 	buf := new(bytes.Buffer)
 
 	buf.WriteRune('\'')
-	// https://dev.mysql.com/doc/refman/5.7/en/string-literals.html
 	for i := 0; i < len(s); i++ {
 		switch s[i] {
 		case 0:
@@ -46,36 +49,40 @@ func (d mysql) EncodeString(s string) string {
 	return buf.String()
 }
 
-func (d mysql) EncodeBool(b bool) string {
+func (d clickhouse) EncodeBool(b bool) string {
 	if b {
 		return "1"
 	}
 	return "0"
 }
 
-func (d mysql) EncodeTime(t time.Time) string {
-	return `'` + t.UTC().Format(timeFormat) + `'`
+func (d clickhouse) EncodeTime(t time.Time) string {
+	return `'` + t.UTC().Format(clickhouseTimeFormat) + `'`
 }
 
-func (d mysql) EncodeBytes(b []byte) string {
+func (d clickhouse) EncodeBytes(b []byte) string {
 	return fmt.Sprintf(`0x%x`, b)
 }
 
-func (d mysql) Placeholder(_ int) string {
+func (d clickhouse) Placeholder(_ int) string {
 	return "?"
 }
 
-func (d mysql) OnConflict(_ string) string {
-	return "ON DUPLICATE KEY UPDATE"
+func (d clickhouse) OnConflict(_ string) string {
+	return ""
 }
 
-func (d mysql) Proposed(column string) string {
-	return fmt.Sprintf("VALUES(%s)", d.QuoteIdent(column))
+func (d clickhouse) Proposed(_ string) string {
+	return ""
 }
 
-func (d mysql) Limit(offset, limit int64) string {
+func (d clickhouse) Limit(offset, limit int64) string {
 	if offset < 0 {
 		return fmt.Sprintf("LIMIT %d", limit)
 	}
 	return fmt.Sprintf("LIMIT %d,%d", offset, limit)
+}
+
+func (d clickhouse) String() string {
+	return "clickhouse"
 }

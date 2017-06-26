@@ -46,3 +46,10 @@ func (d sqlite3) OnConflict(_ string) string {
 func (d sqlite3) Proposed(_ string) string {
 	return ""
 }
+
+func (d sqlite3) Limit(offset, limit int64) string {
+	if offset < 0 {
+		return fmt.Sprintf("LIMIT %d", limit)
+	}
+	return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
+}
