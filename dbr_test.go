@@ -271,3 +271,13 @@ func TestOnConflict(t *testing.T) {
 		assert.Equal(t, "value2", value)
 	}
 }
+
+func TestForkSession(t *testing.T) {
+	sess := testSession[0]
+	sess2 := sess.NewSession(nil)
+	assert.True(t, sess.ctx == sess2.ctx)
+	assert.True(t, sess.EventReceiver == sess2.EventReceiver)
+	recv := new(NullEventReceiver)
+	sess3 := sess.NewSession(recv)
+	assert.True(t, sess3.EventReceiver != sess.EventReceiver)
+}
