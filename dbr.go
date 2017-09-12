@@ -67,6 +67,14 @@ func (conn *Connection) NewSessionContext(ctx context.Context, log EventReceiver
 	return &Session{Connection: conn, EventReceiver: log, ctx: ctx}
 }
 
+// NewSession forks current session
+func (sess *Session) NewSession(log EventReceiver) *Session {
+	if log == nil {
+		log = sess.EventReceiver
+	}
+	return &Session{Connection: sess.Connection, EventReceiver: log, ctx: sess.ctx}
+}
+
 // beginTx starts a transaction with context.
 func (conn *Connection) beginTx() (*sql.Tx, error) {
 	return conn.Begin()
