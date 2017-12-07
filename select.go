@@ -17,6 +17,7 @@ type SelectStmt struct {
 
 	LimitCount  int64
 	OffsetCount int64
+	IsForUpdate bool
 }
 
 // Build builds `SELECT ...` in dialect
@@ -113,6 +114,10 @@ func (b *SelectStmt) Build(d Dialect, buf Buffer) error {
 		buf.WriteString(" ")
 		buf.WriteString(d.Limit(b.OffsetCount, b.LimitCount))
 	}
+
+	if b.IsForUpdate {
+		buf.WriteString(" FOR UPDATE")
+	}
 	return nil
 }
 
@@ -200,6 +205,12 @@ func (b *SelectStmt) Limit(n uint64) *SelectStmt {
 // Offset adds OFFSET, works only if LIMIT is set
 func (b *SelectStmt) Offset(n uint64) *SelectStmt {
 	b.OffsetCount = int64(n)
+	return b
+}
+
+// ForUpdate adds `FOR UPDATE`
+func (b *SelectStmt) ForUpdate() *SelectStmt {
+	b.IsForUpdate = true
 	return b
 }
 
