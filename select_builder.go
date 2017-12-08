@@ -184,3 +184,9 @@ func (b *SelectBuilder) Where(query interface{}, value ...interface{}) *SelectBu
 	b.SelectStmt.Where(query, value...)
 	return b
 }
+
+// ForUpdate adds lock via FOR UPDATE
+func (b *SelectBuilder) ForUpdate() *SelectBuilder {
+	b.SelectStmt.ForUpdate()
+	return b
+}

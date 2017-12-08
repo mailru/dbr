@@ -18,10 +18,11 @@ func TestSelectStmt(t *testing.T) {
 		Having(Eq("e", 2)).
 		OrderAsc("f").
 		Limit(3).
-		Offset(4)
+		Offset(4).
+		ForUpdate()
 	err := builder.Build(dialect.MySQL, buf)
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT DISTINCT a, b FROM ? LEFT JOIN `table2` ON table.a1 = table.a2 WHERE (`c` = ?) GROUP BY d HAVING (`e` = ?) ORDER BY f ASC LIMIT 4,3", buf.String())
+	assert.Equal(t, "SELECT DISTINCT a, b FROM ? LEFT JOIN `table2` ON table.a1 = table.a2 WHERE (`c` = ?) GROUP BY d HAVING (`e` = ?) ORDER BY f ASC LIMIT 4,3 FOR UPDATE", buf.String())
 	// two functions cannot be compared
 	assert.Equal(t, 3, len(buf.Value()))
 }
