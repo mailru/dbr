@@ -4,11 +4,10 @@ package dbr
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/mailru/dbr/dialect"
-
-	"database/sql"
 	"github.com/stretchr/testify/assert"
 )
 
