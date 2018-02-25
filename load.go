@@ -109,7 +109,7 @@ func mapExtractor(columns []string, value reflect.Value) []interface{} {
 		value.Set(reflect.MakeMap(value.Type()))
 	}
 	m := value.Convert(typeKeyValueMap).Interface().(keyValueMap)
-	var ptr []interface{}
+	var ptr = make([]interface{}, 0, len(columns))
 	for _, c := range columns {
 		ptr = append(ptr, &kvScanner{column: c, m: m})
 	}

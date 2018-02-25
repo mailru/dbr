@@ -205,11 +205,11 @@ func (n *NullTime) Scan(value interface{}) error {
 		return nil
 	case []byte:
 		n.Time, err = parseDateTime(string(v), time.UTC)
-		n.Valid = (err == nil)
+		n.Valid = err == nil
 		return err
 	case string:
 		n.Time, err = parseDateTime(v, time.UTC)
-		n.Valid = (err == nil)
+		n.Valid = err == nil
 		return err
 	}
 

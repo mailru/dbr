@@ -31,8 +31,8 @@ func TestLoad(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		var values []driver.Value
 		session, dbmock := newSessionMock()
-		values := []driver.Value{}
 		for _, c := range tc.columns {
 			values = append(values, c)
 		}
