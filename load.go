@@ -68,7 +68,14 @@ type kvScanner struct {
 }
 
 func (kv *kvScanner) Scan(v interface{}) error {
-	kv.m[kv.column] = v
+	if b, ok := v.([]byte); ok {
+		tmp := make([]byte, len(b))
+		copy(tmp, b)
+		kv.m[kv.column] = tmp
+	} else {
+		// int64, float64, bool, string, time.Time, nil
+		kv.m[kv.column] = v
+	}
 	return nil
 }
 
