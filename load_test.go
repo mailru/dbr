@@ -44,6 +44,21 @@ func TestLoad(t *testing.T) {
 	}
 }
 
+func TestLoadWithBytesValue(t *testing.T) {
+	var values []driver.Value
+	columns := []string{"fieldname"}
+	value := []byte("fieldvalue")
+	session, dbmock := newSessionMock()
+	values = append(values, value)
+	rows := sqlmock.NewRows(columns).AddRow(values...)
+	dbmock.ExpectQuery("SELECT .+").WillReturnRows(rows)
+	v := reflect.New(reflect.TypeOf(map[string]interface{}(nil))).Elem().Addr().Interface()
+	session.Select(columns...).From("table").Load(v)
+	value[0] = byte('a')
+	assert.Equal(t, map[string]interface{}{"fieldname": []byte("fieldvalue")},
+		reflect.Indirect(reflect.ValueOf(v)).Interface())
+}
+
 func BenchmarkLoad(b *testing.B) {
 	session, dbmock := newSessionMock()
 	rows := sqlmock.NewRows([]string{"a", "b", "c"})
