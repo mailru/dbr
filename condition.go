@@ -33,7 +33,7 @@ func Or(cond ...Builder) Builder {
 	})
 }
 
-func buildCmp(d Dialect, buf Buffer, pred string, column string, value interface{}) error {
+func buildCmp(d Dialect, buf Buffer, pred, column string, value interface{}) error {
 	buf.WriteString(d.QuoteIdent(column))
 	buf.WriteString(" ")
 	buf.WriteString(pred)
