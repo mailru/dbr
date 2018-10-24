@@ -69,6 +69,11 @@ func TestCondition(t *testing.T) {
 			value: []interface{}{map[int]int{1: 2}},
 		},
 		{
+			cond:  EqBool("find_in_set('a', field)"),
+			query: "find_in_set('a', field)",
+			value: nil,
+		},
+		{
 			cond:  Gt("col", 1),
 			query: "`col` > ?",
 			value: []interface{}{1},
@@ -89,8 +94,8 @@ func TestCondition(t *testing.T) {
 			value: []interface{}{1},
 		},
 		{
-			cond:  And(Lt("a", 1), Or(Gt("b", 2), Neq("c", 3))),
-			query: "(`a` < ?) AND ((`b` > ?) OR (`c` != ?))",
+			cond:  And(Lt("a", 1), Or(Gt("b", 2), Neq("c", 3), EqBool("find_in_set('d', e)"))),
+			query: "(`a` < ?) AND ((`b` > ?) OR (`c` != ?) OR (find_in_set('d', e)))",
 			value: []interface{}{1, 2, 3},
 		},
 	} {

@@ -256,6 +256,7 @@ One common reason to use this is to prevent string concatenation in a loop.
 * Or
 * Eq
 * Neq
+* EqBool
 * Gt
 * Gte
 * Lt
@@ -268,6 +269,7 @@ dbr.And(
     dbr.Lte("created_at", "2015-09-11"),
   ),
   dbr.Eq("title", "hello world"),
+  dbr.EqBool("find_in_set('flag1', flags)"),
 )
 ```
 

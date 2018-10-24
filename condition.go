@@ -90,6 +90,15 @@ func Neq(column string, value interface{}) Builder {
 	})
 }
 
+// EqBool is boolean expression
+// It will be translated as is
+func EqBool(condition string) Builder {
+	return BuildFunc(func(_ Dialect, buf Buffer) error {
+		buf.WriteString(condition)
+		return nil
+	})
+}
+
 // Gt is `>`.
 func Gt(column string, value interface{}) Builder {
 	return BuildFunc(func(d Dialect, buf Buffer) error {
