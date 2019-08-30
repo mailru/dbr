@@ -6,80 +6,88 @@ import (
 )
 
 // DeleteBuilder builds "DELETE ..." stmt
-type DeleteBuilder struct {
+type DeleteBuilder interface {
+	Builder
+	EventReceiver
+	executer
+
+	Where(query interface{}, value ...interface{}) DeleteBuilder
+	Limit(n uint64) DeleteBuilder
+}
+
+type deleteBuilder struct {
 	runner
 	EventReceiver
-	Dialect Dialect
 
-	*DeleteStmt
-
+	Dialect    Dialect
+	deleteStmt *deleteStmt
 	LimitCount int64
 }
 
 // DeleteFrom creates a DeleteBuilder
-func (sess *Session) DeleteFrom(table string) *DeleteBuilder {
-	return &DeleteBuilder{
+func (sess *Session) DeleteFrom(table string) DeleteBuilder {
+	return &deleteBuilder{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		DeleteStmt:    DeleteFrom(table),
+		deleteStmt:    createDeleteStmt(table),
 		LimitCount:    -1,
 	}
 }
 
 // DeleteFrom creates a DeleteBuilder
-func (tx *Tx) DeleteFrom(table string) *DeleteBuilder {
-	return &DeleteBuilder{
+func (tx *Tx) DeleteFrom(table string) DeleteBuilder {
+	return &deleteBuilder{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		DeleteStmt:    DeleteFrom(table),
+		deleteStmt:    createDeleteStmt(table),
 		LimitCount:    -1,
 	}
 }
 
 // DeleteBySql creates a DeleteBuilder from raw query
-func (sess *Session) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
-	return &DeleteBuilder{
+func (sess *Session) DeleteBySql(query string, value ...interface{}) DeleteBuilder {
+	return &deleteBuilder{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		DeleteStmt:    DeleteBySql(query, value...),
+		deleteStmt:    createDeleteStmtBySQL(query, value),
 		LimitCount:    -1,
 	}
 }
 
 // DeleteBySql creates a DeleteBuilder from raw query
-func (tx *Tx) DeleteBySql(query string, value ...interface{}) *DeleteBuilder {
-	return &DeleteBuilder{
+func (tx *Tx) DeleteBySql(query string, value ...interface{}) DeleteBuilder {
+	return &deleteBuilder{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		DeleteStmt:    DeleteBySql(query, value...),
+		deleteStmt:    createDeleteStmtBySQL(query, value),
 		LimitCount:    -1,
 	}
 }
 
 // Exec executes the stmt
-func (b *DeleteBuilder) Exec() (sql.Result, error) {
+func (b *deleteBuilder) Exec() (sql.Result, error) {
 	return exec(b.runner, b.EventReceiver, b, b.Dialect)
 }
 
 // Where adds condition to the stmt
-func (b *DeleteBuilder) Where(query interface{}, value ...interface{}) *DeleteBuilder {
-	b.DeleteStmt.Where(query, value...)
+func (b *deleteBuilder) Where(query interface{}, value ...interface{}) DeleteBuilder {
+	b.deleteStmt.Where(query, value...)
 	return b
 }
 
 // Limit adds LIMIT
-func (b *DeleteBuilder) Limit(n uint64) *DeleteBuilder {
+func (b *deleteBuilder) Limit(n uint64) DeleteBuilder {
 	b.LimitCount = int64(n)
 	return b
 }
 
 // Build builds `DELETE ...` in dialect
-func (b *DeleteBuilder) Build(d Dialect, buf Buffer) error {
-	err := b.DeleteStmt.Build(b.Dialect, buf)
+func (b *deleteBuilder) Build(d Dialect, buf Buffer) error {
+	err := b.deleteStmt.Build(b.Dialect, buf)
 	if err != nil {
 		return err
 	}

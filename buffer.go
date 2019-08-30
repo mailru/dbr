@@ -11,7 +11,8 @@ type Buffer interface {
 	Value() []interface{}
 }
 
-func newBuffer() Buffer {
+// NewBuffer creates buffer
+func NewBuffer() Buffer {
 	return &buffer{}
 }
 
