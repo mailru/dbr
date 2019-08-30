@@ -1,7 +1,27 @@
 package dbr
 
 // SelectStmt builds `SELECT ...`
-type SelectStmt struct {
+type SelectStmt interface {
+	Builder
+
+	From(table interface{}) SelectStmt
+	Distinct() SelectStmt
+	Where(query interface{}, value ...interface{}) SelectStmt
+	Having(query interface{}, value ...interface{}) SelectStmt
+	GroupBy(col ...string) SelectStmt
+	OrderAsc(col string) SelectStmt
+	OrderDesc(col string) SelectStmt
+	Limit(n uint64) SelectStmt
+	Offset(n uint64) SelectStmt
+	ForUpdate() SelectStmt
+	Join(table, on interface{}) SelectStmt
+	LeftJoin(table, on interface{}) SelectStmt
+	RightJoin(table, on interface{}) SelectStmt
+	FullJoin(table, on interface{}) SelectStmt
+	As(alias string) Builder
+}
+
+type selectStmt struct {
 	raw
 
 	IsDistinct bool
@@ -21,7 +41,7 @@ type SelectStmt struct {
 }
 
 // Build builds `SELECT ...` in dialect
-func (b *SelectStmt) Build(d Dialect, buf Buffer) error {
+func (b *selectStmt) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
 		return b.raw.Build(d, buf)
 	}
@@ -122,8 +142,12 @@ func (b *SelectStmt) Build(d Dialect, buf Buffer) error {
 }
 
 // Select creates a SelectStmt
-func Select(column ...interface{}) *SelectStmt {
-	return &SelectStmt{
+func Select(column ...interface{}) SelectStmt {
+	return createSelectStmt(column)
+}
+
+func createSelectStmt(column []interface{}) *selectStmt {
+	return &selectStmt{
 		Column:      column,
 		LimitCount:  -1,
 		OffsetCount: -1,
@@ -131,14 +155,18 @@ func Select(column ...interface{}) *SelectStmt {
 }
 
 // From specifies table
-func (b *SelectStmt) From(table interface{}) *SelectStmt {
+func (b *selectStmt) From(table interface{}) SelectStmt {
 	b.Table = table
 	return b
 }
 
 // SelectBySql creates a SelectStmt from raw query
-func SelectBySql(query string, value ...interface{}) *SelectStmt {
-	return &SelectStmt{
+func SelectBySql(query string, value ...interface{}) SelectStmt {
+	return createSelectStmtBySQL(query, value)
+}
+
+func createSelectStmtBySQL(query string, value []interface{}) *selectStmt {
+	return &selectStmt{
 		raw: raw{
 			Query: query,
 			Value: value,
@@ -149,13 +177,13 @@ func SelectBySql(query string, value ...interface{}) *SelectStmt {
 }
 
 // Distinct adds `DISTINCT`
-func (b *SelectStmt) Distinct() *SelectStmt {
+func (b *selectStmt) Distinct() SelectStmt {
 	b.IsDistinct = true
 	return b
 }
 
 // Where adds a where condition
-func (b *SelectStmt) Where(query interface{}, value ...interface{}) *SelectStmt {
+func (b *selectStmt) Where(query interface{}, value ...interface{}) SelectStmt {
 	switch query := query.(type) {
 	case string:
 		b.WhereCond = append(b.WhereCond, Expr(query, value...))
@@ -166,7 +194,7 @@ func (b *SelectStmt) Where(query interface{}, value ...interface{}) *SelectStmt 
 }
 
 // Having adds a having condition
-func (b *SelectStmt) Having(query interface{}, value ...interface{}) *SelectStmt {
+func (b *selectStmt) Having(query interface{}, value ...interface{}) SelectStmt {
 	switch query := query.(type) {
 	case string:
 		b.HavingCond = append(b.HavingCond, Expr(query, value...))
@@ -177,7 +205,7 @@ func (b *SelectStmt) Having(query interface{}, value ...interface{}) *SelectStmt
 }
 
 // GroupBy specifies columns for grouping
-func (b *SelectStmt) GroupBy(col ...string) *SelectStmt {
+func (b *selectStmt) GroupBy(col ...string) SelectStmt {
 	for _, group := range col {
 		b.Group = append(b.Group, Expr(group))
 	}
@@ -185,60 +213,60 @@ func (b *SelectStmt) GroupBy(col ...string) *SelectStmt {
 }
 
 // OrderAsc specifies columns for ordering in asc direction
-func (b *SelectStmt) OrderAsc(col string) *SelectStmt {
+func (b *selectStmt) OrderAsc(col string) SelectStmt {
 	b.Order = append(b.Order, order(col, asc))
 	return b
 }
 
 // OrderDesc specifies columns for ordering in desc direction
-func (b *SelectStmt) OrderDesc(col string) *SelectStmt {
+func (b *selectStmt) OrderDesc(col string) SelectStmt {
 	b.Order = append(b.Order, order(col, desc))
 	return b
 }
 
 // Limit adds LIMIT
-func (b *SelectStmt) Limit(n uint64) *SelectStmt {
+func (b *selectStmt) Limit(n uint64) SelectStmt {
 	b.LimitCount = int64(n)
 	return b
 }
 
 // Offset adds OFFSET, works only if LIMIT is set
-func (b *SelectStmt) Offset(n uint64) *SelectStmt {
+func (b *selectStmt) Offset(n uint64) SelectStmt {
 	b.OffsetCount = int64(n)
 	return b
 }
 
 // ForUpdate adds `FOR UPDATE`
-func (b *SelectStmt) ForUpdate() *SelectStmt {
+func (b *selectStmt) ForUpdate() SelectStmt {
 	b.IsForUpdate = true
 	return b
 }
 
 // Join joins table on condition
-func (b *SelectStmt) Join(table, on interface{}) *SelectStmt {
+func (b *selectStmt) Join(table, on interface{}) SelectStmt {
 	b.JoinTable = append(b.JoinTable, join(inner, table, on))
 	return b
 }
 
 // LeftJoin joins table on condition via LEFT JOIN
-func (b *SelectStmt) LeftJoin(table, on interface{}) *SelectStmt {
+func (b *selectStmt) LeftJoin(table, on interface{}) SelectStmt {
 	b.JoinTable = append(b.JoinTable, join(left, table, on))
 	return b
 }
 
 // RightJoin joins table on condition via RIGHT JOIN
-func (b *SelectStmt) RightJoin(table, on interface{}) *SelectStmt {
+func (b *selectStmt) RightJoin(table, on interface{}) SelectStmt {
 	b.JoinTable = append(b.JoinTable, join(right, table, on))
 	return b
 }
 
 // FullJoin joins table on condition via FULL JOIN
-func (b *SelectStmt) FullJoin(table, on interface{}) *SelectStmt {
+func (b *selectStmt) FullJoin(table, on interface{}) SelectStmt {
 	b.JoinTable = append(b.JoinTable, join(full, table, on))
 	return b
 }
 
 // As creates alias for select statement
-func (b *SelectStmt) As(alias string) Builder {
+func (b *selectStmt) As(alias string) Builder {
 	return as(b, alias)
 }

@@ -1,17 +1,24 @@
 package dbr
 
 // UpdateStmt builds `UPDATE ...`
-type UpdateStmt struct {
+type UpdateStmt interface {
+	Builder
+
+	Where(query interface{}, value ...interface{}) UpdateStmt
+	Set(column string, value interface{}) UpdateStmt
+	SetMap(m map[string]interface{}) UpdateStmt
+}
+
+type updateStmt struct {
 	raw
 
-	Table string
-	Value map[string]interface{}
-
+	Table     string
+	Value     map[string]interface{}
 	WhereCond []Builder
 }
 
 // Build builds `UPDATE ...` in dialect
-func (b *UpdateStmt) Build(d Dialect, buf Buffer) error {
+func (b *updateStmt) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
 		return b.raw.Build(d, buf)
 	}
@@ -52,16 +59,24 @@ func (b *UpdateStmt) Build(d Dialect, buf Buffer) error {
 }
 
 // Update creates an UpdateStmt
-func Update(table string) *UpdateStmt {
-	return &UpdateStmt{
+func Update(table string) UpdateStmt {
+	return createUpdateStmt(table)
+}
+
+func createUpdateStmt(table string) *updateStmt {
+	return &updateStmt{
 		Table: table,
 		Value: make(map[string]interface{}),
 	}
 }
 
 // UpdateBySql creates an UpdateStmt with raw query
-func UpdateBySql(query string, value ...interface{}) *UpdateStmt {
-	return &UpdateStmt{
+func UpdateBySql(query string, value ...interface{}) UpdateStmt {
+	return createUpdateStmtBySQL(query, value)
+}
+
+func createUpdateStmtBySQL(query string, value []interface{}) *updateStmt {
+	return &updateStmt{
 		raw: raw{
 			Query: query,
 			Value: value,
@@ -71,7 +86,7 @@ func UpdateBySql(query string, value ...interface{}) *UpdateStmt {
 }
 
 // Where adds a where condition
-func (b *UpdateStmt) Where(query interface{}, value ...interface{}) *UpdateStmt {
+func (b *updateStmt) Where(query interface{}, value ...interface{}) UpdateStmt {
 	switch query := query.(type) {
 	case string:
 		b.WhereCond = append(b.WhereCond, Expr(query, value...))
@@ -82,13 +97,13 @@ func (b *UpdateStmt) Where(query interface{}, value ...interface{}) *UpdateStmt 
 }
 
 // Set specifies a key-value pair
-func (b *UpdateStmt) Set(column string, value interface{}) *UpdateStmt {
+func (b *updateStmt) Set(column string, value interface{}) UpdateStmt {
 	b.Value[column] = value
 	return b
 }
 
 // SetMap specifies a list of key-value pair
-func (b *UpdateStmt) SetMap(m map[string]interface{}) *UpdateStmt {
+func (b *updateStmt) SetMap(m map[string]interface{}) UpdateStmt {
 	for col, val := range m {
 		b.Set(col, val)
 	}
