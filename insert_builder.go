@@ -6,64 +6,80 @@ import (
 )
 
 // InsertBuilder builds "INSERT ..." stmt
-type InsertBuilder struct {
-	runner
+type InsertBuilder interface {
+	Builder
 	EventReceiver
-	Dialect Dialect
+	executer
+	Columns(column ...string) InsertBuilder
+	Values(value ...interface{}) InsertBuilder
+	Record(structValue interface{}) InsertBuilder
+	OnConflictMap(constraint string, actions map[string]interface{}) InsertBuilder
+	OnConflict(constraint string) ConflictStmt
+	Pair(column string, value interface{}) InsertBuilder
+}
 
-	RecordID reflect.Value
+// InsertBuilder builds "INSERT ..." stmt
+type insertBuilder struct {
+	EventReceiver
+	runner
 
-	*InsertStmt
+	Dialect    Dialect
+	RecordID   reflect.Value
+	insertStmt *insertStmt
 }
 
 // InsertInto creates a InsertBuilder
-func (sess *Session) InsertInto(table string) *InsertBuilder {
-	return &InsertBuilder{
+func (sess *Session) InsertInto(table string) InsertBuilder {
+	return &insertBuilder{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		InsertStmt:    InsertInto(table),
+		insertStmt:    createInsertStmt(table),
 	}
 }
 
 // InsertInto creates a InsertBuilder
-func (tx *Tx) InsertInto(table string) *InsertBuilder {
-	return &InsertBuilder{
+func (tx *Tx) InsertInto(table string) InsertBuilder {
+	return &insertBuilder{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		InsertStmt:    InsertInto(table),
+		insertStmt:    createInsertStmt(table),
 	}
 }
 
 // InsertBySql creates a InsertBuilder from raw query
-func (sess *Session) InsertBySql(query string, value ...interface{}) *InsertBuilder {
-	return &InsertBuilder{
+func (sess *Session) InsertBySql(query string, value ...interface{}) InsertBuilder {
+	return &insertBuilder{
 		runner:        sess,
 		EventReceiver: sess,
 		Dialect:       sess.Dialect,
-		InsertStmt:    InsertBySql(query, value...),
+		insertStmt:    createInsertStmtBySQL(query, value),
 	}
 }
 
 // InsertBySql creates a InsertBuilder from raw query
-func (tx *Tx) InsertBySql(query string, value ...interface{}) *InsertBuilder {
-	return &InsertBuilder{
+func (tx *Tx) InsertBySql(query string, value ...interface{}) InsertBuilder {
+	return &insertBuilder{
 		runner:        tx,
 		EventReceiver: tx,
 		Dialect:       tx.Dialect,
-		InsertStmt:    InsertBySql(query, value...),
+		insertStmt:    createInsertStmtBySQL(query, value),
 	}
+}
+
+func (b *insertBuilder) Build(d Dialect, buf Buffer) error {
+	return b.insertStmt.Build(d, buf)
 }
 
 // Pair adds a new column value pair
-func (b *InsertBuilder) Pair(column string, value interface{}) *InsertBuilder {
-	b.Column = append(b.Column, column)
-	switch len(b.Value) {
+func (b *insertBuilder) Pair(column string, value interface{}) InsertBuilder {
+	b.Columns(column)
+	switch len(b.insertStmt.Value) {
 	case 0:
-		b.InsertStmt.Values(value)
+		b.insertStmt.Values(value)
 	case 1:
-		b.Value[0] = append(b.Value[0], value)
+		b.insertStmt.Value[0] = append(b.insertStmt.Value[0], value)
 	default:
 		panic("pair only allows one record to insert")
 	}
@@ -71,7 +87,7 @@ func (b *InsertBuilder) Pair(column string, value interface{}) *InsertBuilder {
 }
 
 // Exec executes the stmt
-func (b *InsertBuilder) Exec() (sql.Result, error) {
+func (b *insertBuilder) Exec() (sql.Result, error) {
 	result, err := exec(b.runner, b.EventReceiver, b, b.Dialect)
 	if err != nil {
 		return nil, err
@@ -87,19 +103,19 @@ func (b *InsertBuilder) Exec() (sql.Result, error) {
 }
 
 // Columns adds columns
-func (b *InsertBuilder) Columns(column ...string) *InsertBuilder {
-	b.InsertStmt.Columns(column...)
+func (b *insertBuilder) Columns(column ...string) InsertBuilder {
+	b.insertStmt.Columns(column...)
 	return b
 }
 
 // Values adds a tuple for columns
-func (b *InsertBuilder) Values(value ...interface{}) *InsertBuilder {
-	b.InsertStmt.Values(value...)
+func (b *insertBuilder) Values(value ...interface{}) InsertBuilder {
+	b.insertStmt.Values(value...)
 	return b
 }
 
 // Record adds a tuple for columns from a struct
-func (b *InsertBuilder) Record(structValue interface{}) *InsertBuilder {
+func (b *insertBuilder) Record(structValue interface{}) InsertBuilder {
 	v := reflect.Indirect(reflect.ValueOf(structValue))
 	if v.Kind() == reflect.Struct && v.CanSet() {
 		// ID is recommended by golint here
@@ -112,12 +128,17 @@ func (b *InsertBuilder) Record(structValue interface{}) *InsertBuilder {
 		}
 	}
 
-	b.InsertStmt.Record(structValue)
+	b.insertStmt.Record(structValue)
 	return b
 }
 
 // OnConflictMap allows to add actions for constraint violation, e.g UPSERT
-func (b *InsertBuilder) OnConflictMap(constraint string, actions map[string]interface{}) *InsertBuilder {
-	b.InsertStmt.OnConflictMap(constraint, actions)
+func (b *insertBuilder) OnConflictMap(constraint string, actions map[string]interface{}) InsertBuilder {
+	b.insertStmt.OnConflictMap(constraint, actions)
 	return b
+}
+
+// OnConflict creates an empty OnConflict section fo insert statement , e.g UPSERT
+func (b *insertBuilder) OnConflict(constraint string) ConflictStmt {
+	return b.insertStmt.OnConflict(constraint)
 }

@@ -23,43 +23,52 @@ package dbr
 //  - There's a lot of possible types. Do we want to include ALL of them? u?int{8,16,32,64}?, strings, null varieties, etc.
 //    - Let's just do the common, non-null varieties.
 
+type typesLoader interface {
+	ReturnInt64() (int64, error)
+	ReturnInt64s() ([]int64, error)
+	ReturnUint64() (uint64, error)
+	ReturnUint64s() ([]uint64, error)
+	ReturnString() (string, error)
+	ReturnStrings() ([]string, error)
+}
+
 // ReturnInt64 executes the SelectStmt and returns the value as an int64
-func (b *SelectBuilder) ReturnInt64() (int64, error) {
+func (b *selectBuilder) ReturnInt64() (int64, error) {
 	var v int64
 	err := b.LoadValue(&v)
 	return v, err
 }
 
 // ReturnInt64s executes the SelectStmt and returns the value as a slice of int64s
-func (b *SelectBuilder) ReturnInt64s() ([]int64, error) {
+func (b *selectBuilder) ReturnInt64s() ([]int64, error) {
 	var v []int64
 	_, err := b.LoadValues(&v)
 	return v, err
 }
 
 // ReturnUint64 executes the SelectStmt and returns the value as an uint64
-func (b *SelectBuilder) ReturnUint64() (uint64, error) {
+func (b *selectBuilder) ReturnUint64() (uint64, error) {
 	var v uint64
 	err := b.LoadValue(&v)
 	return v, err
 }
 
 // ReturnUint64s executes the SelectStmt and returns the value as a slice of uint64s
-func (b *SelectBuilder) ReturnUint64s() ([]uint64, error) {
+func (b *selectBuilder) ReturnUint64s() ([]uint64, error) {
 	var v []uint64
 	_, err := b.LoadValues(&v)
 	return v, err
 }
 
 // ReturnString executes the SelectStmt and returns the value as a string
-func (b *SelectBuilder) ReturnString() (string, error) {
+func (b *selectBuilder) ReturnString() (string, error) {
 	var v string
 	err := b.LoadValue(&v)
 	return v, err
 }
 
 // ReturnStrings executes the SelectStmt and returns the value as a slice of strings
-func (b *SelectBuilder) ReturnStrings() ([]string, error) {
+func (b *selectBuilder) ReturnStrings() ([]string, error) {
 	var v []string
 	_, err := b.LoadValues(&v)
 	return v, err
