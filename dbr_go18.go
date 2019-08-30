@@ -31,6 +31,6 @@ func (tx *Tx) Query(query string, args ...interface{}) (*sql.Rows, error) {
 }
 
 // beginTx starts a transaction with context.
-func (sess *Session) beginTx() (*sql.Tx, error) {
-	return sess.BeginTx(sess.ctx, nil)
+func (sess *Session) beginTx(opts *sql.TxOptions) (*sql.Tx, error) {
+	return sess.BeginTx(sess.ctx, opts)
 }
