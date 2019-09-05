@@ -100,7 +100,8 @@ type runner interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
-type executer interface {
+// Executer can execute requests to database
+type Executer interface {
 	Exec() (sql.Result, error)
 }
 

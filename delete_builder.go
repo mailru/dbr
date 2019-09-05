@@ -9,7 +9,7 @@ import (
 type DeleteBuilder interface {
 	Builder
 	EventReceiver
-	executer
+	Executer
 
 	Where(query interface{}, value ...interface{}) DeleteBuilder
 	Limit(n uint64) DeleteBuilder

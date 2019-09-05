@@ -9,7 +9,7 @@ import (
 type UpdateBuilder interface {
 	Builder
 	EventReceiver
-	executer
+	Executer
 
 	Where(query interface{}, value ...interface{}) UpdateBuilder
 	Set(column string, value interface{}) UpdateBuilder
