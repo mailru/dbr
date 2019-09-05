@@ -9,7 +9,7 @@ import (
 type InsertBuilder interface {
 	Builder
 	EventReceiver
-	executer
+	Executer
 	Columns(column ...string) InsertBuilder
 	Values(value ...interface{}) InsertBuilder
 	Record(structValue interface{}) InsertBuilder
