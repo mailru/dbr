@@ -1,5 +1,10 @@
 package dbr
 
+import (
+	"fmt"
+	"strings"
+)
+
 type joinType uint8
 
 const (
@@ -8,6 +13,17 @@ const (
 	right
 	full
 )
+
+func aliasTable(table, seperator string, d Dialect, buf Buffer) error {
+	parts := strings.Split(table, seperator)
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid table alias: '%s'", table)
+	}
+	tableName := strings.TrimSpace(parts[0])
+	aliasName := strings.TrimSpace(parts[1])
+	_, err := buf.WriteString(d.QuoteIdent(tableName) + " AS " + d.QuoteIdent(aliasName))
+	return err
+}
 
 func join(t joinType, table, on interface{}) Builder {
 	return BuildFunc(func(d Dialect, buf Buffer) error {
@@ -23,7 +39,15 @@ func join(t joinType, table, on interface{}) Builder {
 		buf.WriteString("JOIN ")
 		switch table := table.(type) {
 		case string:
-			buf.WriteString(d.QuoteIdent(table))
+			table = strings.Replace(table, " AS ", " as ", 1)
+			if strings.Contains(table, " as ") {
+				aliasTable(table, " as ", d, buf)
+			} else if strings.Contains(table, " ") {
+				aliasTable(table, " ", d, buf)
+
+			} else {
+				buf.WriteString(d.QuoteIdent(table))
+			}
 		default:
 			buf.WriteString(placeholder)
 			buf.WriteValue(table)

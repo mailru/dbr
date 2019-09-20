@@ -11,7 +11,7 @@ func TestSelectStmt(t *testing.T) {
 	buf := NewBuffer()
 	builder := Select("a", "b").
 		From(Select("a").From("table")).
-		LeftJoin("table2", "table.a1 = table.a2").
+		LeftJoin("table2 as aliasedTable", "table.a1 = aliasedTable.a2").
 		Distinct().
 		Where(Eq("c", 1)).
 		GroupBy("d").
@@ -22,7 +22,27 @@ func TestSelectStmt(t *testing.T) {
 		ForUpdate()
 	err := builder.Build(dialect.MySQL, buf)
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT DISTINCT a, b FROM ? LEFT JOIN `table2` ON table.a1 = table.a2 WHERE (`c` = ?) GROUP BY d HAVING (`e` = ?) ORDER BY f ASC LIMIT 4,3 FOR UPDATE", buf.String())
+	assert.Equal(t, "SELECT DISTINCT a, b FROM ? LEFT JOIN `table2` AS `aliasedTable` ON table.a1 = aliasedTable.a2 WHERE (`c` = ?) GROUP BY d HAVING (`e` = ?) ORDER BY f ASC LIMIT 4,3 FOR UPDATE", buf.String())
+	// two functions cannot be compared
+	assert.Equal(t, 3, len(buf.Value()))
+}
+
+func TestSelectStmtWithSpaceAlias(t *testing.T) {
+	buf := NewBuffer()
+	builder := Select("a", "b").
+		From(Select("a").From("table")).
+		LeftJoin("table2 aliasedTable", "table.a1 = aliasedTable.a2").
+		Distinct().
+		Where(Eq("c", 1)).
+		GroupBy("d").
+		Having(Eq("e", 2)).
+		OrderAsc("f").
+		Limit(3).
+		Offset(4).
+		ForUpdate()
+	err := builder.Build(dialect.MySQL, buf)
+	assert.NoError(t, err)
+	assert.Equal(t, "SELECT DISTINCT a, b FROM ? LEFT JOIN `table2` AS `aliasedTable` ON table.a1 = aliasedTable.a2 WHERE (`c` = ?) GROUP BY d HAVING (`e` = ?) ORDER BY f ASC LIMIT 4,3 FOR UPDATE", buf.String())
 	// two functions cannot be compared
 	assert.Equal(t, 3, len(buf.Value()))
 }
