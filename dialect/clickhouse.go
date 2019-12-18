@@ -86,3 +86,7 @@ func (d clickhouse) Limit(offset, limit int64) string {
 func (d clickhouse) String() string {
 	return "clickhouse"
 }
+
+func (d clickhouse) Prewhere() string {
+	return "PREWHERE"
+}

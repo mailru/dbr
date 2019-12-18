@@ -53,3 +53,7 @@ func (d sqlite3) Limit(offset, limit int64) string {
 	}
 	return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
 }
+
+func (d sqlite3) Prewhere() string {
+	return ""
+}

@@ -9,6 +9,7 @@ type SelectBuilder interface {
 
 	From(table interface{}) SelectBuilder
 	Distinct() SelectBuilder
+	Prewhere(query interface{}, value ...interface{}) SelectBuilder
 	Where(query interface{}, value ...interface{}) SelectBuilder
 	Having(query interface{}, value ...interface{}) SelectBuilder
 	GroupBy(col ...string) SelectBuilder
@@ -206,6 +207,12 @@ func (b *selectBuilder) Paginate(page, perPage uint64) SelectBuilder {
 // OrderBy specifies column for ordering
 func (b *selectBuilder) OrderBy(col string) SelectBuilder {
 	b.selectStmt.Order = append(b.selectStmt.Order, Expr(col))
+	return b
+}
+
+// Where adds a where condition
+func (b *selectBuilder) Prewhere(query interface{}, value ...interface{}) SelectBuilder {
+	b.selectStmt.Prewhere(query, value...)
 	return b
 }
 
