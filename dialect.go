@@ -14,4 +14,5 @@ type Dialect interface {
 	OnConflict(constraint string) string
 	Proposed(column string) string
 	Limit(offset, limit int64) string
+	Prewhere() string
 }

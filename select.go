@@ -6,6 +6,7 @@ type SelectStmt interface {
 
 	From(table interface{}) SelectStmt
 	Distinct() SelectStmt
+	Prewhere(query interface{}, value ...interface{}) SelectStmt
 	Where(query interface{}, value ...interface{}) SelectStmt
 	Having(query interface{}, value ...interface{}) SelectStmt
 	GroupBy(col ...string) SelectStmt
@@ -30,10 +31,11 @@ type selectStmt struct {
 	Table     interface{}
 	JoinTable []Builder
 
-	WhereCond  []Builder
-	Group      []Builder
-	HavingCond []Builder
-	Order      []Builder
+	PrewhereCond []Builder
+	WhereCond    []Builder
+	Group        []Builder
+	HavingCond   []Builder
+	Order        []Builder
 
 	LimitCount  int64
 	OffsetCount int64
@@ -85,6 +87,21 @@ func (b *selectStmt) Build(d Dialect, buf Buffer) error {
 					return err
 				}
 			}
+		}
+	}
+
+	if len(b.PrewhereCond) > 0 {
+		keyword := d.Prewhere()
+		if len(keyword) == 0 {
+			return ErrPrewhereNotSupported
+		}
+
+		buf.WriteString(" ")
+		buf.WriteString(keyword)
+		buf.WriteString(" ")
+		err := And(b.PrewhereCond...).Build(d, buf)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -179,6 +196,19 @@ func createSelectStmtBySQL(query string, value []interface{}) *selectStmt {
 // Distinct adds `DISTINCT`
 func (b *selectStmt) Distinct() SelectStmt {
 	b.IsDistinct = true
+	return b
+}
+
+// Prewhere adds a prewhere condition
+// For example clickhouse PREWHERE:
+// https://clickhouse.yandex/docs/en/query_language/select/#prewhere-clause
+func (b *selectStmt) Prewhere(query interface{}, value ...interface{}) SelectStmt {
+	switch query := query.(type) {
+	case string:
+		b.PrewhereCond = append(b.PrewhereCond, Expr(query, value...))
+	case Builder:
+		b.PrewhereCond = append(b.PrewhereCond, query)
+	}
 	return b
 }
 

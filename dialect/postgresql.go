@@ -50,3 +50,7 @@ func (d postgreSQL) Limit(offset, limit int64) string {
 	}
 	return fmt.Sprintf("LIMIT %d OFFSET %d", limit, offset)
 }
+
+func (d postgreSQL) Prewhere() string {
+	return ""
+}
