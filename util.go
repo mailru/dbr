@@ -65,3 +65,21 @@ func structTraverse(m map[string][]int, t reflect.Type, head []int) {
 		}
 	}
 }
+
+// extractOriginal removes all ptr and interface wrappers
+func extractOriginal(v reflect.Value) (reflect.Value, reflect.Kind) {
+	switch v.Kind() {
+	case reflect.Ptr:
+		if v.IsNil() {
+			return v, reflect.Ptr
+		}
+		return extractOriginal(v.Elem())
+	case reflect.Interface:
+		if v.IsNil() {
+			return v, reflect.Interface
+		}
+		return extractOriginal(v.Elem())
+	default:
+		return v, v.Kind()
+	}
+}
