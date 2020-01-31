@@ -1,5 +1,10 @@
 package dbr
 
+import (
+	"reflect"
+	"time"
+)
+
 // SelectBuilder build "SELECT" stmt
 type SelectBuilder interface {
 	Builder
@@ -26,6 +31,7 @@ type SelectBuilder interface {
 	OrderDir(col string, isAsc bool) SelectBuilder
 	Paginate(page, perPage uint64) SelectBuilder
 	OrderBy(col string) SelectBuilder
+	InTimezone(loc *time.Location) SelectBuilder
 }
 
 type selectBuilder struct {
@@ -34,6 +40,7 @@ type selectBuilder struct {
 
 	Dialect    Dialect
 	selectStmt *selectStmt
+	timezone   *time.Location
 }
 
 func prepareSelect(a []string) []interface{} {
@@ -84,13 +91,41 @@ func (tx *Tx) SelectBySql(query string, value ...interface{}) SelectBuilder {
 	}
 }
 
+func (b *selectBuilder) changeTimezone(value reflect.Value) {
+	v, t := extractOriginal(value)
+	switch t {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			b.changeTimezone(v.Index(i))
+		}
+	case reflect.Map:
+		// TODO: add timezone changing for map keys
+		for _, k := range v.MapKeys() {
+			b.changeTimezone(v.MapIndex(k))
+		}
+	case reflect.Struct:
+		if v.Type() == reflect.TypeOf(time.Time{}) {
+			v.Set(reflect.ValueOf(v.Interface().(time.Time).In(b.timezone)))
+			return
+		}
+
+		for i := 0; i < v.NumField(); i++ {
+			b.changeTimezone(v.Field(i))
+		}
+	}
+}
+
 func (b *selectBuilder) Build(d Dialect, buf Buffer) error {
 	return b.selectStmt.Build(d, buf)
 }
 
 // Load loads any value from query result
 func (b *selectBuilder) Load(value interface{}) (int, error) {
-	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	c, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	if err == nil && b.timezone != nil {
+		b.changeTimezone(reflect.ValueOf(value))
+	}
+	return c, err
 }
 
 // LoadStruct loads struct from query result, returns ErrNotFound if there is no result
@@ -102,12 +137,19 @@ func (b *selectBuilder) LoadStruct(value interface{}) error {
 	if count == 0 {
 		return ErrNotFound
 	}
+	if b.timezone != nil {
+		b.changeTimezone(reflect.ValueOf(value))
+	}
 	return nil
 }
 
 // LoadStructs loads structures from query result
 func (b *selectBuilder) LoadStructs(value interface{}) (int, error) {
-	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	c, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	if err == nil && b.timezone != nil {
+		b.changeTimezone(reflect.ValueOf(value))
+	}
+	return c, err
 }
 
 // LoadValue loads any value from query result, returns ErrNotFound if there is no result
@@ -119,12 +161,19 @@ func (b *selectBuilder) LoadValue(value interface{}) error {
 	if count == 0 {
 		return ErrNotFound
 	}
+	if b.timezone != nil {
+		b.changeTimezone(reflect.ValueOf(value))
+	}
 	return nil
 }
 
 // LoadValues loads any values from query result
 func (b *selectBuilder) LoadValues(value interface{}) (int, error) {
-	return query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	c, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	if err == nil && b.timezone != nil {
+		b.changeTimezone(reflect.ValueOf(value))
+	}
+	return c, err
 }
 
 // Join joins table on condition
@@ -225,6 +274,12 @@ func (b *selectBuilder) Where(query interface{}, value ...interface{}) SelectBui
 // ForUpdate adds lock via FOR UPDATE
 func (b *selectBuilder) ForUpdate() SelectBuilder {
 	b.selectStmt.ForUpdate()
+	return b
+}
+
+// InTimezone all time.Time fields in the result will be returned with the specified location.
+func (b *selectBuilder) InTimezone(loc *time.Location) SelectBuilder {
+	b.timezone = loc
 	return b
 }
 
