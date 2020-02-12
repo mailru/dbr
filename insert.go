@@ -148,7 +148,7 @@ func (b *insertStmt) Columns(column ...string) InsertStmt {
 
 // Values adds a tuple for columns
 func (b *insertStmt) Values(value ...interface{}) InsertStmt {
-	b.Value = append(b.Value, value)
+	b.Value = append(b.Value, value...)
 	return b
 }
 
