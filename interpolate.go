@@ -20,7 +20,7 @@ type interpolator struct {
 // InterpolateForDialect replaces placeholder in query with corresponding value in dialect
 func InterpolateForDialect(query string, value []interface{}, d Dialect) (string, error) {
 	i := interpolator{
-		Buffer:  newBuffer(),
+		Buffer:  NewBuffer(),
 		Dialect: d,
 	}
 	err := i.interpolate(query, value)
@@ -66,14 +66,14 @@ func (i *interpolator) interpolate(query string, value []interface{}) error {
 
 func (i *interpolator) encodePlaceholder(value interface{}) error {
 	if builder, ok := value.(Builder); ok {
-		pbuf := newBuffer()
+		pbuf := NewBuffer()
 		err := builder.Build(i.Dialect, pbuf)
 		if err != nil {
 			return err
 		}
 		paren := true
 		switch value.(type) {
-		case *SelectStmt:
+		case SelectStmt:
 		case *union:
 		default:
 			paren = false

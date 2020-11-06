@@ -42,7 +42,7 @@ func TestInterpolateIgnoreBinary(t *testing.T) {
 		},
 	} {
 		i := interpolator{
-			Buffer:       newBuffer(),
+			Buffer:       NewBuffer(),
 			Dialect:      dialect.MySQL,
 			IgnoreBinary: true,
 		}

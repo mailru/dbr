@@ -82,17 +82,17 @@ func (conn *Connection) beginTx() (*sql.Tx, error) {
 
 // SessionRunner can do anything that a Session can except start a transaction.
 type SessionRunner interface {
-	Select(column ...string) *SelectBuilder
-	SelectBySql(query string, value ...interface{}) *SelectBuilder
+	Select(column ...string) SelectBuilder
+	SelectBySql(query string, value ...interface{}) SelectBuilder
 
-	InsertInto(table string) *InsertBuilder
-	InsertBySql(query string, value ...interface{}) *InsertBuilder
+	InsertInto(table string) InsertBuilder
+	InsertBySql(query string, value ...interface{}) InsertBuilder
 
-	Update(table string) *UpdateBuilder
-	UpdateBySql(query string, value ...interface{}) *UpdateBuilder
+	Update(table string) UpdateBuilder
+	UpdateBySql(query string, value ...interface{}) UpdateBuilder
 
-	DeleteFrom(table string) *DeleteBuilder
-	DeleteBySql(query string, value ...interface{}) *DeleteBuilder
+	DeleteFrom(table string) DeleteBuilder
+	DeleteBySql(query string, value ...interface{}) DeleteBuilder
 }
 
 type runner interface {
@@ -100,9 +100,22 @@ type runner interface {
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 }
 
+// Executer can execute requests to database
+type Executer interface {
+	Exec() (sql.Result, error)
+}
+
+type loader interface {
+	Load(value interface{}) (int, error)
+	LoadStruct(value interface{}) error
+	LoadStructs(value interface{}) (int, error)
+	LoadValue(value interface{}) error
+	LoadValues(value interface{}) (int, error)
+}
+
 func exec(runner runner, log EventReceiver, builder Builder, d Dialect) (sql.Result, error) {
 	i := interpolator{
-		Buffer:       newBuffer(),
+		Buffer:       NewBuffer(),
 		Dialect:      d,
 		IgnoreBinary: true,
 	}
@@ -133,7 +146,7 @@ func exec(runner runner, log EventReceiver, builder Builder, d Dialect) (sql.Res
 
 func query(runner runner, log EventReceiver, builder Builder, d Dialect, dest interface{}) (int, error) {
 	i := interpolator{
-		Buffer:       newBuffer(),
+		Buffer:       NewBuffer(),
 		Dialect:      d,
 		IgnoreBinary: true,
 	}

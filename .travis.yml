@@ -4,9 +4,11 @@ notifications:
   email: false
 
 go:
-  - 1.8
-  - 1.9
-  - "1.10"
+  - "1.11"
+  - "1.12"
+
+env:
+  - GO111MODULE=on
 
 dist: trusty
 sudo: required
@@ -24,15 +26,8 @@ before_install:
   - docker run -d -p 127.0.0.1:8123:8123 --name dbr-clickhouse-server yandex/clickhouse-server
 
 install:
-  - travis_retry go get -u github.com/golang/lint/golint
-  - travis_retry go get golang.org/x/tools/cmd/cover
   - travis_retry go get github.com/mattn/goveralls
-  - travis_retry go get github.com/go-sql-driver/mysql
-  - travis_retry go get github.com/lib/pq
-  - travis_retry go get github.com/mailru/go-clickhouse
-  - travis_retry go get github.com/mattn/go-sqlite3
-  - travis_retry go get gopkg.in/DATA-DOG/go-sqlmock.v1
-  - travis_retry go get github.com/stretchr/testify
+  - travis_retry go get golang.org/x/lint/golint
 
   - psql -c 'create database dbr_ci_test;' -U postgres
   - mysql -e 'CREATE DATABASE dbr_ci_test;' -uroot
@@ -43,7 +38,7 @@ before_script:
   - export DBR_TEST_CLICKHOUSE_DSN="http://localhost:8123/default"
 
 script:
-  - golint ./...
+  - $HOME/gopath/bin/golint ./...
   - go vet ./...
   - test -z "$(gofmt -d -s . | tee /dev/stderr)"
   - go test -v -covermode=count -coverprofile=coverage.out

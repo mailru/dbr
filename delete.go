@@ -1,16 +1,20 @@
 package dbr
 
 // DeleteStmt builds `DELETE ...`
-type DeleteStmt struct {
+type DeleteStmt interface {
+	Builder
+	Where(query interface{}, value ...interface{}) DeleteStmt
+}
+
+type deleteStmt struct {
 	raw
 
-	Table string
-
+	Table     string
 	WhereCond []Builder
 }
 
 // Build builds `DELETE ...` in dialect
-func (b *DeleteStmt) Build(d Dialect, buf Buffer) error {
+func (b *deleteStmt) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
 		return b.raw.Build(d, buf)
 	}
@@ -33,15 +37,23 @@ func (b *DeleteStmt) Build(d Dialect, buf Buffer) error {
 }
 
 // DeleteFrom creates a DeleteStmt
-func DeleteFrom(table string) *DeleteStmt {
-	return &DeleteStmt{
+func DeleteFrom(table string) DeleteStmt {
+	return createDeleteStmt(table)
+}
+
+func createDeleteStmt(table string) *deleteStmt {
+	return &deleteStmt{
 		Table: table,
 	}
 }
 
 // DeleteBySql creates a DeleteStmt from raw query
-func DeleteBySql(query string, value ...interface{}) *DeleteStmt {
-	return &DeleteStmt{
+func DeleteBySql(query string, value ...interface{}) DeleteStmt {
+	return createDeleteStmtBySQL(query, value)
+}
+
+func createDeleteStmtBySQL(query string, value []interface{}) *deleteStmt {
+	return &deleteStmt{
 		raw: raw{
 			Query: query,
 			Value: value,
@@ -50,7 +62,7 @@ func DeleteBySql(query string, value ...interface{}) *DeleteStmt {
 }
 
 // Where adds a where condition
-func (b *DeleteStmt) Where(query interface{}, value ...interface{}) *DeleteStmt {
+func (b *deleteStmt) Where(query interface{}, value ...interface{}) DeleteStmt {
 	switch query := query.(type) {
 	case string:
 		b.WhereCond = append(b.WhereCond, Expr(query, value...))

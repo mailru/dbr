@@ -7,19 +7,38 @@ import (
 )
 
 // ConflictStmt is ` ON CONFLICT ...` part of InsertStmt
-type ConflictStmt struct {
+type ConflictStmt interface {
+	Action(column string, action interface{}) ConflictStmt
+}
+
+type conflictStmt struct {
 	constraint string
 	actions    map[string]interface{}
 }
 
+// Action adds action for column which will do if conflict happens
+func (b *conflictStmt) Action(column string, action interface{}) ConflictStmt {
+	b.actions[column] = action
+	return b
+}
+
 // InsertStmt builds `INSERT INTO ...`
-type InsertStmt struct {
+type InsertStmt interface {
+	Builder
+	Columns(column ...string) InsertStmt
+	Values(value ...interface{}) InsertStmt
+	Record(structValue interface{}) InsertStmt
+	OnConflictMap(constraint string, actions map[string]interface{}) InsertStmt
+	OnConflict(constraint string) ConflictStmt
+}
+
+type insertStmt struct {
 	raw
 
 	Table    string
 	Column   []string
 	Value    [][]interface{}
-	Conflict *ConflictStmt
+	Conflict *conflictStmt
 }
 
 // Proposed is reference to proposed value in on conflict clause
@@ -31,7 +50,7 @@ func Proposed(column string) Builder {
 }
 
 // Build builds `INSERT INTO ...` in dialect
-func (b *InsertStmt) Build(d Dialect, buf Buffer) error {
+func (b *insertStmt) Build(d Dialect, buf Buffer) error {
 	if b.raw.Query != "" {
 		return b.raw.Build(d, buf)
 	}
@@ -97,15 +116,23 @@ func (b *InsertStmt) Build(d Dialect, buf Buffer) error {
 }
 
 // InsertInto creates an InsertStmt
-func InsertInto(table string) *InsertStmt {
-	return &InsertStmt{
+func InsertInto(table string) InsertStmt {
+	return createInsertStmt(table)
+}
+
+func createInsertStmt(table string) *insertStmt {
+	return &insertStmt{
 		Table: table,
 	}
 }
 
 // InsertBySql creates an InsertStmt from raw query
-func InsertBySql(query string, value ...interface{}) *InsertStmt {
-	return &InsertStmt{
+func InsertBySql(query string, value ...interface{}) InsertStmt {
+	return createInsertStmtBySQL(query, value)
+}
+
+func createInsertStmtBySQL(query string, value []interface{}) *insertStmt {
+	return &insertStmt{
 		raw: raw{
 			Query: query,
 			Value: value,
@@ -114,19 +141,19 @@ func InsertBySql(query string, value ...interface{}) *InsertStmt {
 }
 
 // Columns adds columns
-func (b *InsertStmt) Columns(column ...string) *InsertStmt {
-	b.Column = column
+func (b *insertStmt) Columns(column ...string) InsertStmt {
+	b.Column = append(b.Column, column...)
 	return b
 }
 
 // Values adds a tuple for columns
-func (b *InsertStmt) Values(value ...interface{}) *InsertStmt {
+func (b *insertStmt) Values(value ...interface{}) InsertStmt {
 	b.Value = append(b.Value, value)
 	return b
 }
 
 // Record adds a tuple for columns from a struct
-func (b *InsertStmt) Record(structValue interface{}) *InsertStmt {
+func (b *insertStmt) Record(structValue interface{}) InsertStmt {
 	v := reflect.Indirect(reflect.ValueOf(structValue))
 
 	if v.Kind() == reflect.Struct {
@@ -145,18 +172,13 @@ func (b *InsertStmt) Record(structValue interface{}) *InsertStmt {
 }
 
 // OnConflictMap allows to add actions for constraint violation, e.g UPSERT
-func (b *InsertStmt) OnConflictMap(constraint string, actions map[string]interface{}) *InsertStmt {
-	b.Conflict = &ConflictStmt{constraint: constraint, actions: actions}
+func (b *insertStmt) OnConflictMap(constraint string, actions map[string]interface{}) InsertStmt {
+	b.Conflict = &conflictStmt{constraint: constraint, actions: actions}
 	return b
 }
 
 // OnConflict creates an empty OnConflict section fo insert statement , e.g UPSERT
-func (b *InsertStmt) OnConflict(constraint string) *ConflictStmt {
-	return b.OnConflictMap(constraint, make(map[string]interface{})).Conflict
-}
-
-// Action adds action for column which will do if conflict happens
-func (b *ConflictStmt) Action(column string, action interface{}) *ConflictStmt {
-	b.actions[column] = action
-	return b
+func (b *insertStmt) OnConflict(constraint string) ConflictStmt {
+	b.Conflict = &conflictStmt{constraint: constraint, actions: make(map[string]interface{})}
+	return b.Conflict
 }

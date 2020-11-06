@@ -9,7 +9,7 @@ const (
 	full
 )
 
-func join(t joinType, table interface{}, on interface{}) Builder {
+func join(t joinType, table, on interface{}) Builder {
 	return BuildFunc(func(d Dialect, buf Buffer) error {
 		buf.WriteString(" ")
 		switch t {

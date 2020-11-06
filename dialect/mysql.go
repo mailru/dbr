@@ -79,3 +79,7 @@ func (d mysql) Limit(offset, limit int64) string {
 	}
 	return fmt.Sprintf("LIMIT %d,%d", offset, limit)
 }
+
+func (d mysql) Prewhere() string {
+	return ""
+}

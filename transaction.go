@@ -15,7 +15,12 @@ type Tx struct {
 
 // Begin creates a transaction for the given session
 func (sess *Session) Begin() (*Tx, error) {
-	tx, err := sess.beginTx()
+	return sess.BeginWithOpts(&sql.TxOptions{})
+}
+
+// BeginWithOptions creates a transaction for the given section with ability to set TxOpts
+func (sess *Session) BeginWithOpts(opts *sql.TxOptions) (*Tx, error) {
+	tx, err := sess.beginTx(opts)
 	if err != nil {
 		return nil, sess.EventErr("dbr.begin.error", err)
 	}
