@@ -28,13 +28,16 @@ func join(t joinType, table interface{}, on interface{}) Builder {
 			buf.WriteString(placeholder)
 			buf.WriteValue(table)
 		}
-		buf.WriteString(" ON ")
-		switch on := on.(type) {
-		case string:
-			buf.WriteString(on)
-		case Builder:
-			buf.WriteString(placeholder)
-			buf.WriteValue(on)
+
+		if on != nil {
+			buf.WriteString(" ON ")
+			switch on := on.(type) {
+			case string:
+				buf.WriteString(on)
+			case Builder:
+				buf.WriteString(placeholder)
+				buf.WriteValue(on)
+			}
 		}
 		return nil
 	})
