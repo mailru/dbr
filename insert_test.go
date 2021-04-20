@@ -8,6 +8,7 @@ import (
 )
 
 type insertTest struct {
+	v string
 	A int
 	C string `db:"b"`
 }
@@ -18,6 +19,18 @@ func TestInsertStmt(t *testing.T) {
 		A: 2,
 		C: "two",
 	})
+	err := builder.Build(dialect.MySQL, buf)
+	assert.NoError(t, err)
+	assert.Equal(t, "INSERT INTO `table` (`a`,`b`) VALUES (?,?), (?,?)", buf.String())
+	assert.Equal(t, []interface{}{1, "one", 2, "two"}, buf.Value())
+}
+
+func TestInsertRecordNoColumns(t *testing.T) {
+	buf := NewBuffer()
+	builder := InsertInto("table").Record(&insertTest{
+		A: 2,
+		C: "two",
+	}).Values(1, "one")
 	err := builder.Build(dialect.MySQL, buf)
 	assert.NoError(t, err)
 	assert.Equal(t, "INSERT INTO `table` (`a`,`b`) VALUES (?,?), (?,?)", buf.String())
