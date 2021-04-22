@@ -9,6 +9,7 @@ type UpdateStmt interface {
 	Where(query interface{}, value ...interface{}) UpdateStmt
 	Set(column string, value interface{}) UpdateStmt
 	SetMap(m map[string]interface{}) UpdateStmt
+	SetRecord(structValue interface{}) UpdateStmt
 }
 
 type updateStmt struct {
