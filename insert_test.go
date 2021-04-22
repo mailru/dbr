@@ -34,7 +34,7 @@ func TestInsertRecordNoColumns(t *testing.T) {
 	err := builder.Build(dialect.MySQL, buf)
 	assert.NoError(t, err)
 	assert.Equal(t, "INSERT INTO `table` (`a`,`b`) VALUES (?,?), (?,?)", buf.String())
-	assert.Equal(t, []interface{}{1, "one", 2, "two"}, buf.Value())
+	assert.Equal(t, []interface{}{2, "two", 1, "one"}, buf.Value())
 }
 
 func TestInsertOnConflictStmt(t *testing.T) {
