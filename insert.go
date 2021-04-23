@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"sort"
 )
 
 // ConflictStmt is ` ON CONFLICT ...` part of InsertStmt
@@ -164,9 +165,13 @@ func (b *insertStmt) Record(structValue interface{}) InsertStmt {
 		// populate columns from available record fields
 		// if no columns were specified up to this point
 		if len(b.Column) == 0 {
+			b.Column = make([]string, 0, len(m))
 			for key := range m {
 				b.Column = append(b.Column, key)
 			}
+
+			// ensure that the column ordering is deterministic
+			sort.Strings(b.Column)
 		}
 
 		for _, key := range b.Column {

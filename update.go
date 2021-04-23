@@ -116,10 +116,9 @@ func (b *updateStmt) SetMap(m map[string]interface{}) UpdateStmt {
 // SetRecord specifies a record with field and values to set
 func (b *updateStmt) SetRecord(structValue interface{}) UpdateStmt {
 	v := reflect.Indirect(reflect.ValueOf(structValue))
+
 	if v.Kind() == reflect.Struct {
 		sm := structMap(v.Type())
-		// populate columns from available record fields
-		// if no columns were specified up to this point
 
 		for col, index := range sm {
 			b.Set(col, v.FieldByIndex(index).Interface())
