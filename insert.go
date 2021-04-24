@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"sort"
 )
 
 // ConflictStmt is ` ON CONFLICT ...` part of InsertStmt
@@ -152,13 +153,27 @@ func (b *insertStmt) Values(value ...interface{}) InsertStmt {
 	return b
 }
 
-// Record adds a tuple for columns from a struct
+// Record adds a tuple for columns from a struct if no columns where
+// specified yet for this insert, the record fields will be used to populate the columns.
 func (b *insertStmt) Record(structValue interface{}) InsertStmt {
 	v := reflect.Indirect(reflect.ValueOf(structValue))
 
 	if v.Kind() == reflect.Struct {
 		var value []interface{}
 		m := structMap(v.Type())
+
+		// populate columns from available record fields
+		// if no columns were specified up to this point
+		if len(b.Column) == 0 {
+			b.Column = make([]string, 0, len(m))
+			for key := range m {
+				b.Column = append(b.Column, key)
+			}
+
+			// ensure that the column ordering is deterministic
+			sort.Strings(b.Column)
+		}
+
 		for _, key := range b.Column {
 			if index, ok := m[key]; ok {
 				value = append(value, v.FieldByIndex(index).Interface())
@@ -168,6 +183,7 @@ func (b *insertStmt) Record(structValue interface{}) InsertStmt {
 		}
 		b.Values(value...)
 	}
+
 	return b
 }
 

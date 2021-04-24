@@ -12,26 +12,26 @@ type SelectBuilder interface {
 	loader
 	typesLoader
 
-	From(table interface{}) SelectBuilder
+	As(alias string) Builder
 	Distinct() SelectBuilder
-	Prewhere(query interface{}, value ...interface{}) SelectBuilder
-	Where(query interface{}, value ...interface{}) SelectBuilder
-	Having(query interface{}, value ...interface{}) SelectBuilder
-	GroupBy(col ...string) SelectBuilder
-	OrderAsc(col string) SelectStmt
-	OrderDesc(col string) SelectStmt
-	Limit(n uint64) SelectBuilder
-	Offset(n uint64) SelectBuilder
 	ForUpdate() SelectBuilder
+	From(table interface{}) SelectBuilder
+	FullJoin(table, on interface{}) SelectBuilder
+	GroupBy(col ...string) SelectBuilder
+	Having(query interface{}, value ...interface{}) SelectBuilder
+	InTimezone(loc *time.Location) SelectBuilder
 	Join(table, on interface{}) SelectBuilder
 	LeftJoin(table, on interface{}) SelectBuilder
-	RightJoin(table, on interface{}) SelectBuilder
-	FullJoin(table, on interface{}) SelectBuilder
-	As(alias string) Builder
+	Limit(n uint64) SelectBuilder
+	Offset(n uint64) SelectBuilder
+	OrderAsc(col string) SelectBuilder
+	OrderBy(col string) SelectBuilder
+	OrderDesc(col string) SelectBuilder
 	OrderDir(col string, isAsc bool) SelectBuilder
 	Paginate(page, perPage uint64) SelectBuilder
-	OrderBy(col string) SelectBuilder
-	InTimezone(loc *time.Location) SelectBuilder
+	Prewhere(query interface{}, value ...interface{}) SelectBuilder
+	RightJoin(table, on interface{}) SelectBuilder
+	Where(query interface{}, value ...interface{}) SelectBuilder
 }
 
 type selectBuilder struct {
@@ -283,12 +283,14 @@ func (b *selectBuilder) InTimezone(loc *time.Location) SelectBuilder {
 	return b
 }
 
-func (b *selectBuilder) OrderAsc(col string) SelectStmt {
-	return b.selectStmt.OrderAsc(col)
+func (b *selectBuilder) OrderAsc(col string) SelectBuilder {
+	b.selectStmt.OrderAsc(col)
+	return b
 }
 
-func (b *selectBuilder) OrderDesc(col string) SelectStmt {
-	return b.selectStmt.OrderDesc(col)
+func (b *selectBuilder) OrderDesc(col string) SelectBuilder {
+	b.selectStmt.OrderDesc(col)
+	return b
 }
 
 // As creates alias for select statement
