@@ -15,6 +15,7 @@ type SelectStmt interface {
 	Limit(n uint64) SelectStmt
 	Offset(n uint64) SelectStmt
 	ForUpdate() SelectStmt
+	SkipLocked() SelectStmt
 	Join(table, on interface{}) SelectStmt
 	LeftJoin(table, on interface{}) SelectStmt
 	RightJoin(table, on interface{}) SelectStmt
@@ -37,9 +38,10 @@ type selectStmt struct {
 	HavingCond   []Builder
 	Order        []Builder
 
-	LimitCount  int64
-	OffsetCount int64
-	IsForUpdate bool
+	LimitCount   int64
+	OffsetCount  int64
+	IsForUpdate  bool
+	IsSkipLocked bool
 }
 
 // Build builds `SELECT ...` in dialect
@@ -155,6 +157,11 @@ func (b *selectStmt) Build(d Dialect, buf Buffer) error {
 	if b.IsForUpdate {
 		buf.WriteString(" FOR UPDATE")
 	}
+
+	if b.IsSkipLocked {
+		buf.WriteString(" SKIP LOCKED")
+	}
+
 	return nil
 }
 
@@ -269,6 +276,12 @@ func (b *selectStmt) Offset(n uint64) SelectStmt {
 // ForUpdate adds `FOR UPDATE`
 func (b *selectStmt) ForUpdate() SelectStmt {
 	b.IsForUpdate = true
+	return b
+}
+
+// SkipLocked adds `SKIP LOCKED`
+func (b *selectStmt) SkipLocked() SelectStmt {
+	b.IsSkipLocked = true
 	return b
 }
 

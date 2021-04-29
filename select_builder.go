@@ -31,6 +31,7 @@ type SelectBuilder interface {
 	Paginate(page, perPage uint64) SelectBuilder
 	Prewhere(query interface{}, value ...interface{}) SelectBuilder
 	RightJoin(table, on interface{}) SelectBuilder
+	SkipLocked() SelectBuilder
 	Where(query interface{}, value ...interface{}) SelectBuilder
 }
 
@@ -274,6 +275,12 @@ func (b *selectBuilder) Where(query interface{}, value ...interface{}) SelectBui
 // ForUpdate adds lock via FOR UPDATE
 func (b *selectBuilder) ForUpdate() SelectBuilder {
 	b.selectStmt.ForUpdate()
+	return b
+}
+
+// SkipLocked skips locked rows via SKIP LOCKED
+func (b *selectBuilder) SkipLocked() SelectBuilder {
+	b.selectStmt.SkipLocked()
 	return b
 }
 
