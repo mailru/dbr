@@ -13,6 +13,7 @@ type SelectBuilder interface {
 	typesLoader
 
 	As(alias string) Builder
+	Comment(text string) SelectBuilder
 	Distinct() SelectBuilder
 	ForUpdate() SelectBuilder
 	From(table interface{}) SelectBuilder
@@ -303,4 +304,10 @@ func (b *selectBuilder) OrderDesc(col string) SelectBuilder {
 // As creates alias for select statement
 func (b *selectBuilder) As(alias string) Builder {
 	return b.selectStmt.As(alias)
+}
+
+// Comment adds a comment at the beginning of the query
+func (b *selectBuilder) Comment(text string) SelectBuilder {
+	b.selectStmt.AddComment(text)
+	return b
 }
