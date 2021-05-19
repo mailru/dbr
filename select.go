@@ -20,6 +20,7 @@ type SelectStmt interface {
 	LeftJoin(table, on interface{}) SelectStmt
 	RightJoin(table, on interface{}) SelectStmt
 	FullJoin(table, on interface{}) SelectStmt
+	AddComment(text string) SelectStmt
 	As(alias string) Builder
 }
 
@@ -32,6 +33,7 @@ type selectStmt struct {
 	Table     interface{}
 	JoinTable []Builder
 
+	Comment      []Builder
 	PrewhereCond []Builder
 	WhereCond    []Builder
 	Group        []Builder
@@ -52,6 +54,17 @@ func (b *selectStmt) Build(d Dialect, buf Buffer) error {
 
 	if len(b.Column) == 0 {
 		return ErrColumnNotSpecified
+	}
+
+	if len(b.Comment) > 0 {
+		for _, comm := range b.Comment {
+			buf.WriteString("/* ")
+			err := comm.Build(d, buf)
+			if err != nil {
+				return err
+			}
+			buf.WriteString(" */")
+		}
 	}
 
 	buf.WriteString("SELECT ")
@@ -306,6 +319,12 @@ func (b *selectStmt) RightJoin(table, on interface{}) SelectStmt {
 // FullJoin joins table on condition via FULL JOIN
 func (b *selectStmt) FullJoin(table, on interface{}) SelectStmt {
 	b.JoinTable = append(b.JoinTable, join(full, table, on))
+	return b
+}
+
+// AddComment adds a comment at the beginning of the query
+func (b *selectStmt) AddComment(comment string) SelectStmt {
+	b.Comment = append(b.Comment, Expr(comment))
 	return b
 }
 
