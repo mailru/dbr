@@ -11,6 +11,7 @@ func TestSelectStmt(t *testing.T) {
 	bufClickHouse := NewBuffer()
 	bufMySQL := NewBuffer()
 	builder := Select("a", "b").
+		AddComment("zzz").
 		From(Select("a").From("table")).
 		LeftJoin("table2", "table.a1 = table.a2").
 		Distinct().
@@ -21,11 +22,12 @@ func TestSelectStmt(t *testing.T) {
 		OrderAsc("f").
 		Limit(3).
 		Offset(4).
-		ForUpdate()
+		ForUpdate().
+		SkipLocked()
 
 	err := builder.Build(dialect.ClickHouse, bufClickHouse) // because this lib is clickhouse first.
 	assert.NoError(t, err)
-	assert.Equal(t, "SELECT DISTINCT a, b FROM ? LEFT JOIN `table2` ON table.a1 = table.a2 PREWHERE (`c1` = ?) WHERE (`c2` = ?) GROUP BY d HAVING (`e` = ?) ORDER BY f ASC LIMIT 4,3 FOR UPDATE", bufClickHouse.String())
+	assert.Equal(t, "/* zzz */SELECT DISTINCT a, b FROM ? LEFT JOIN `table2` ON table.a1 = table.a2 PREWHERE (`c1` = ?) WHERE (`c2` = ?) GROUP BY d HAVING (`e` = ?) ORDER BY f ASC LIMIT 4,3 FOR UPDATE SKIP LOCKED", bufClickHouse.String())
 	assert.Equal(t, 4, len(bufClickHouse.Value()))
 
 	err = builder.Build(dialect.MySQL, bufMySQL)

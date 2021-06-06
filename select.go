@@ -15,10 +15,12 @@ type SelectStmt interface {
 	Limit(n uint64) SelectStmt
 	Offset(n uint64) SelectStmt
 	ForUpdate() SelectStmt
+	SkipLocked() SelectStmt
 	Join(table, on interface{}) SelectStmt
 	LeftJoin(table, on interface{}) SelectStmt
 	RightJoin(table, on interface{}) SelectStmt
 	FullJoin(table, on interface{}) SelectStmt
+	AddComment(text string) SelectStmt
 	As(alias string) Builder
 }
 
@@ -31,15 +33,17 @@ type selectStmt struct {
 	Table     interface{}
 	JoinTable []Builder
 
+	Comment      []Builder
 	PrewhereCond []Builder
 	WhereCond    []Builder
 	Group        []Builder
 	HavingCond   []Builder
 	Order        []Builder
 
-	LimitCount  int64
-	OffsetCount int64
-	IsForUpdate bool
+	LimitCount   int64
+	OffsetCount  int64
+	IsForUpdate  bool
+	IsSkipLocked bool
 }
 
 // Build builds `SELECT ...` in dialect
@@ -50,6 +54,17 @@ func (b *selectStmt) Build(d Dialect, buf Buffer) error {
 
 	if len(b.Column) == 0 {
 		return ErrColumnNotSpecified
+	}
+
+	if len(b.Comment) > 0 {
+		for _, comm := range b.Comment {
+			buf.WriteString("/* ")
+			err := comm.Build(d, buf)
+			if err != nil {
+				return err
+			}
+			buf.WriteString(" */")
+		}
 	}
 
 	buf.WriteString("SELECT ")
@@ -155,6 +170,11 @@ func (b *selectStmt) Build(d Dialect, buf Buffer) error {
 	if b.IsForUpdate {
 		buf.WriteString(" FOR UPDATE")
 	}
+
+	if b.IsSkipLocked {
+		buf.WriteString(" SKIP LOCKED")
+	}
+
 	return nil
 }
 
@@ -272,6 +292,12 @@ func (b *selectStmt) ForUpdate() SelectStmt {
 	return b
 }
 
+// SkipLocked adds `SKIP LOCKED`
+func (b *selectStmt) SkipLocked() SelectStmt {
+	b.IsSkipLocked = true
+	return b
+}
+
 // Join joins table on condition
 func (b *selectStmt) Join(table, on interface{}) SelectStmt {
 	b.JoinTable = append(b.JoinTable, join(inner, table, on))
@@ -293,6 +319,12 @@ func (b *selectStmt) RightJoin(table, on interface{}) SelectStmt {
 // FullJoin joins table on condition via FULL JOIN
 func (b *selectStmt) FullJoin(table, on interface{}) SelectStmt {
 	b.JoinTable = append(b.JoinTable, join(full, table, on))
+	return b
+}
+
+// AddComment adds a comment at the beginning of the query
+func (b *selectStmt) AddComment(comment string) SelectStmt {
+	b.Comment = append(b.Comment, Expr(comment))
 	return b
 }
 
