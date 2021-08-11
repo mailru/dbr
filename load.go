@@ -51,7 +51,7 @@ func Load(rows *sql.Rows, value interface{}) (int, error) {
 			break
 		}
 	}
-	return count, nil
+	return count, rows.Err()
 }
 
 type dummyScanner struct{}
