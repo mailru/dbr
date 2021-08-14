@@ -132,6 +132,7 @@ func (b *selectBuilder) Load(value interface{}) (int, error) {
 
 // LoadStruct loads struct from query result, returns ErrNotFound if there is no result
 func (b *selectBuilder) LoadStruct(value interface{}) error {
+	b.selectStmt.Limit(1)
 	count, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err != nil {
 		return err
@@ -156,6 +157,7 @@ func (b *selectBuilder) LoadStructs(value interface{}) (int, error) {
 
 // LoadValue loads any value from query result, returns ErrNotFound if there is no result
 func (b *selectBuilder) LoadValue(value interface{}) error {
+	b.selectStmt.Limit(1)
 	count, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err != nil {
 		return err
