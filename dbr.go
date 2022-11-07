@@ -97,12 +97,16 @@ type SessionRunner interface {
 
 type runner interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+
 	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 }
 
 // Executer can execute requests to database
 type Executer interface {
 	Exec() (sql.Result, error)
+	ExecContext(ctx context.Context) (sql.Result, error)
 }
 
 type loader interface {
@@ -111,9 +115,14 @@ type loader interface {
 	LoadStructs(value interface{}) (int, error)
 	LoadValue(value interface{}) error
 	LoadValues(value interface{}) (int, error)
+	LoadContext(ctx context.Context, value interface{}) (int, error)
+	LoadStructContext(ctx context.Context, value interface{}) error
+	LoadStructsContext(ctx context.Context, value interface{}) (int, error)
+	LoadValueContext(ctx context.Context, value interface{}) error
+	LoadValuesContext(ctx context.Context, value interface{}) (int, error)
 }
 
-func exec(runner runner, log EventReceiver, builder Builder, d Dialect) (sql.Result, error) {
+func exec(ctx context.Context, runner runner, log EventReceiver, builder Builder, d Dialect) (sql.Result, error) {
 	i := interpolator{
 		Buffer:       NewBuffer(),
 		Dialect:      d,
@@ -135,8 +144,18 @@ func exec(runner runner, log EventReceiver, builder Builder, d Dialect) (sql.Res
 		})
 	}()
 
+	traceImpl, hasTracingImpl := log.(TracingEventReceiver)
+	if hasTracingImpl {
+		ctx = traceImpl.SpanStart(ctx, "dbr.exec", query)
+		defer traceImpl.SpanFinish(ctx)
+	}
+
 	result, err := runner.Exec(query, value...)
 	if err != nil {
+		if hasTracingImpl {
+			traceImpl.SpanError(ctx, err)
+		}
+
 		return result, log.EventErrKv("dbr.exec.exec", err, kvs{
 			"sql": query,
 		})
@@ -144,7 +163,7 @@ func exec(runner runner, log EventReceiver, builder Builder, d Dialect) (sql.Res
 	return result, nil
 }
 
-func query(runner runner, log EventReceiver, builder Builder, d Dialect, dest interface{}) (int, error) {
+func query(ctx context.Context, runner runner, log EventReceiver, builder Builder, d Dialect, dest interface{}) (int, error) {
 	i := interpolator{
 		Buffer:       NewBuffer(),
 		Dialect:      d,
@@ -166,8 +185,18 @@ func query(runner runner, log EventReceiver, builder Builder, d Dialect, dest in
 		})
 	}()
 
-	rows, err := runner.Query(query, value...)
+	traceImpl, hasTracingImpl := log.(TracingEventReceiver)
+	if hasTracingImpl {
+		ctx = traceImpl.SpanStart(ctx, "dbr.select", query)
+		defer traceImpl.SpanFinish(ctx)
+	}
+
+	rows, err := runner.QueryContext(ctx, query, value...)
 	if err != nil {
+		if hasTracingImpl {
+			traceImpl.SpanError(ctx, err)
+		}
+
 		return 0, log.EventErrKv("dbr.select.load.query", err, kvs{
 			"sql": query,
 		})

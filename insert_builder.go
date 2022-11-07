@@ -1,6 +1,7 @@
 package dbr
 
 import (
+	"context"
 	"database/sql"
 	"reflect"
 )
@@ -32,7 +33,7 @@ type insertBuilder struct {
 func (sess *Session) InsertInto(table string) InsertBuilder {
 	return &insertBuilder{
 		runner:        sess,
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		insertStmt:    createInsertStmt(table),
 	}
@@ -42,7 +43,7 @@ func (sess *Session) InsertInto(table string) InsertBuilder {
 func (tx *Tx) InsertInto(table string) InsertBuilder {
 	return &insertBuilder{
 		runner:        tx,
-		EventReceiver: tx,
+		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		insertStmt:    createInsertStmt(table),
 	}
@@ -52,7 +53,7 @@ func (tx *Tx) InsertInto(table string) InsertBuilder {
 func (sess *Session) InsertBySql(query string, value ...interface{}) InsertBuilder {
 	return &insertBuilder{
 		runner:        sess,
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		insertStmt:    createInsertStmtBySQL(query, value),
 	}
@@ -62,7 +63,7 @@ func (sess *Session) InsertBySql(query string, value ...interface{}) InsertBuild
 func (tx *Tx) InsertBySql(query string, value ...interface{}) InsertBuilder {
 	return &insertBuilder{
 		runner:        tx,
-		EventReceiver: tx,
+		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		insertStmt:    createInsertStmtBySQL(query, value),
 	}
@@ -86,9 +87,14 @@ func (b *insertBuilder) Pair(column string, value interface{}) InsertBuilder {
 	return b
 }
 
-// Exec executes the stmt
+// Exec executes the stmt with background context
 func (b *insertBuilder) Exec() (sql.Result, error) {
-	result, err := exec(b.runner, b.EventReceiver, b, b.Dialect)
+	return b.ExecContext(context.Background())
+}
+
+// ExecContext executes the stmt
+func (b *insertBuilder) ExecContext(ctx context.Context) (sql.Result, error) {
+	result, err := exec(ctx, b.runner, b.EventReceiver, b, b.Dialect)
 	if err != nil {
 		return nil, err
 	}
