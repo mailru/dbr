@@ -1,6 +1,7 @@
 package dbr
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 )
@@ -30,7 +31,7 @@ type updateBuilder struct {
 func (sess *Session) Update(table string) UpdateBuilder {
 	return &updateBuilder{
 		runner:        sess,
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		updateStmt:    createUpdateStmt(table),
 		LimitCount:    -1,
@@ -41,7 +42,7 @@ func (sess *Session) Update(table string) UpdateBuilder {
 func (tx *Tx) Update(table string) UpdateBuilder {
 	return &updateBuilder{
 		runner:        tx,
-		EventReceiver: tx,
+		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		updateStmt:    createUpdateStmt(table),
 		LimitCount:    -1,
@@ -52,7 +53,7 @@ func (tx *Tx) Update(table string) UpdateBuilder {
 func (sess *Session) UpdateBySql(query string, value ...interface{}) UpdateBuilder {
 	return &updateBuilder{
 		runner:        sess,
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		updateStmt:    createUpdateStmtBySQL(query, value),
 		LimitCount:    -1,
@@ -63,16 +64,21 @@ func (sess *Session) UpdateBySql(query string, value ...interface{}) UpdateBuild
 func (tx *Tx) UpdateBySql(query string, value ...interface{}) UpdateBuilder {
 	return &updateBuilder{
 		runner:        tx,
-		EventReceiver: tx,
+		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		updateStmt:    createUpdateStmtBySQL(query, value),
 		LimitCount:    -1,
 	}
 }
 
-// Exec executes the stmt
+// Exec executes the stmt with background context
 func (b *updateBuilder) Exec() (sql.Result, error) {
-	return exec(b.runner, b.EventReceiver, b, b.Dialect)
+	return b.ExecContext(context.Background())
+}
+
+// ExecContext executes the stmt
+func (b *updateBuilder) ExecContext(ctx context.Context) (sql.Result, error) {
+	return exec(ctx, b.runner, b.EventReceiver, b, b.Dialect)
 }
 
 // Set adds "SET column=value"

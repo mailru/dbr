@@ -1,6 +1,7 @@
 package dbr
 
 import (
+	"context"
 	"reflect"
 	"time"
 )
@@ -57,7 +58,7 @@ func prepareSelect(a []string) []interface{} {
 func (sess *Session) Select(column ...string) SelectBuilder {
 	return &selectBuilder{
 		runner:        sess,
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		selectStmt:    createSelectStmt(prepareSelect(column)),
 	}
@@ -67,7 +68,7 @@ func (sess *Session) Select(column ...string) SelectBuilder {
 func (tx *Tx) Select(column ...string) SelectBuilder {
 	return &selectBuilder{
 		runner:        tx,
-		EventReceiver: tx,
+		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		selectStmt:    createSelectStmt(prepareSelect(column)),
 	}
@@ -77,7 +78,7 @@ func (tx *Tx) Select(column ...string) SelectBuilder {
 func (sess *Session) SelectBySql(query string, value ...interface{}) SelectBuilder {
 	return &selectBuilder{
 		runner:        sess,
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		selectStmt:    createSelectStmtBySQL(query, value),
 	}
@@ -87,7 +88,7 @@ func (sess *Session) SelectBySql(query string, value ...interface{}) SelectBuild
 func (tx *Tx) SelectBySql(query string, value ...interface{}) SelectBuilder {
 	return &selectBuilder{
 		runner:        tx,
-		EventReceiver: tx,
+		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		selectStmt:    createSelectStmtBySQL(query, value),
 	}
@@ -121,18 +122,28 @@ func (b *selectBuilder) Build(d Dialect, buf Buffer) error {
 	return b.selectStmt.Build(d, buf)
 }
 
-// Load loads any value from query result
+// Load loads any value from query result with background context
 func (b *selectBuilder) Load(value interface{}) (int, error) {
-	c, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	return b.LoadContext(context.Background(), value)
+}
+
+// LoadContext loads any value from query result
+func (b *selectBuilder) LoadContext(ctx context.Context, value interface{}) (int, error) {
+	c, err := query(ctx, b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err == nil && b.timezone != nil {
 		b.changeTimezone(reflect.ValueOf(value))
 	}
 	return c, err
 }
 
-// LoadStruct loads struct from query result, returns ErrNotFound if there is no result
+// LoadStruct loads struct from query result with background context, returns ErrNotFound if there is no result
 func (b *selectBuilder) LoadStruct(value interface{}) error {
-	count, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	return b.LoadStructContext(context.Background(), value)
+}
+
+// LoadStructContext loads struct from query result, returns ErrNotFound if there is no result
+func (b *selectBuilder) LoadStructContext(ctx context.Context, value interface{}) error {
+	count, err := query(ctx, b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err != nil {
 		return err
 	}
@@ -145,18 +156,28 @@ func (b *selectBuilder) LoadStruct(value interface{}) error {
 	return nil
 }
 
-// LoadStructs loads structures from query result
+// LoadStructs loads structures from query result with background context
 func (b *selectBuilder) LoadStructs(value interface{}) (int, error) {
-	c, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	return b.LoadStructsContext(context.Background(), value)
+}
+
+// LoadStructsContext loads structures from query result
+func (b *selectBuilder) LoadStructsContext(ctx context.Context, value interface{}) (int, error) {
+	c, err := query(ctx, b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err == nil && b.timezone != nil {
 		b.changeTimezone(reflect.ValueOf(value))
 	}
 	return c, err
 }
 
-// LoadValue loads any value from query result, returns ErrNotFound if there is no result
+// LoadValue loads any value from query result with background context, returns ErrNotFound if there is no result
 func (b *selectBuilder) LoadValue(value interface{}) error {
-	count, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	return b.LoadValueContext(context.Background(), value)
+}
+
+// LoadValueContext loads any value from query result, returns ErrNotFound if there is no result
+func (b *selectBuilder) LoadValueContext(ctx context.Context, value interface{}) error {
+	count, err := query(ctx, b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err != nil {
 		return err
 	}
@@ -169,9 +190,14 @@ func (b *selectBuilder) LoadValue(value interface{}) error {
 	return nil
 }
 
-// LoadValues loads any values from query result
+// LoadValues loads any values from query result with background context
 func (b *selectBuilder) LoadValues(value interface{}) (int, error) {
-	c, err := query(b.runner, b.EventReceiver, b, b.Dialect, value)
+	return b.LoadValuesContext(context.Background(), value)
+}
+
+// LoadValuesContext loads any values from query result
+func (b *selectBuilder) LoadValuesContext(ctx context.Context, value interface{}) (int, error) {
+	c, err := query(ctx, b.runner, b.EventReceiver, b, b.Dialect, value)
 	if err == nil && b.timezone != nil {
 		b.changeTimezone(reflect.ValueOf(value))
 	}

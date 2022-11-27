@@ -1,6 +1,7 @@
 package dbr
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 )
@@ -28,7 +29,7 @@ type deleteBuilder struct {
 func (sess *Session) DeleteFrom(table string) DeleteBuilder {
 	return &deleteBuilder{
 		runner:        sess,
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		deleteStmt:    createDeleteStmt(table),
 		LimitCount:    -1,
@@ -39,7 +40,7 @@ func (sess *Session) DeleteFrom(table string) DeleteBuilder {
 func (tx *Tx) DeleteFrom(table string) DeleteBuilder {
 	return &deleteBuilder{
 		runner:        tx,
-		EventReceiver: tx,
+		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		deleteStmt:    createDeleteStmt(table),
 		LimitCount:    -1,
@@ -50,7 +51,7 @@ func (tx *Tx) DeleteFrom(table string) DeleteBuilder {
 func (sess *Session) DeleteBySql(query string, value ...interface{}) DeleteBuilder {
 	return &deleteBuilder{
 		runner:        sess,
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		deleteStmt:    createDeleteStmtBySQL(query, value),
 		LimitCount:    -1,
@@ -61,16 +62,21 @@ func (sess *Session) DeleteBySql(query string, value ...interface{}) DeleteBuild
 func (tx *Tx) DeleteBySql(query string, value ...interface{}) DeleteBuilder {
 	return &deleteBuilder{
 		runner:        tx,
-		EventReceiver: tx,
+		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		deleteStmt:    createDeleteStmtBySQL(query, value),
 		LimitCount:    -1,
 	}
 }
 
-// Exec executes the stmt
+// Exec executes the stmt with background context
 func (b *deleteBuilder) Exec() (sql.Result, error) {
-	return exec(b.runner, b.EventReceiver, b, b.Dialect)
+	return b.ExecContext(context.Background())
+}
+
+// ExecContext executes the stmt
+func (b *deleteBuilder) ExecContext(ctx context.Context) (sql.Result, error) {
+	return exec(ctx, b.runner, b.EventReceiver, b, b.Dialect)
 }
 
 // Where adds condition to the stmt

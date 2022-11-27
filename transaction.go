@@ -18,7 +18,7 @@ func (sess *Session) Begin() (*Tx, error) {
 	return sess.BeginWithOpts(&sql.TxOptions{})
 }
 
-// BeginWithOptions creates a transaction for the given section with ability to set TxOpts
+// BeginWithOpts creates a transaction for the given section with ability to set TxOpts
 func (sess *Session) BeginWithOpts(opts *sql.TxOptions) (*Tx, error) {
 	tx, err := sess.beginTx(opts)
 	if err != nil {
@@ -27,7 +27,7 @@ func (sess *Session) BeginWithOpts(opts *sql.TxOptions) (*Tx, error) {
 	sess.Event("dbr.begin")
 
 	return &Tx{
-		EventReceiver: sess,
+		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		Tx:            tx,
 		ctx:           sess.ctx,
