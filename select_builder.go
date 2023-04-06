@@ -36,6 +36,7 @@ type SelectBuilder interface {
 	RightJoin(table, on interface{}) SelectBuilder
 	SkipLocked() SelectBuilder
 	Where(query interface{}, value ...interface{}) SelectBuilder
+	GetRows(context.Context) (*sql.Rows, error)
 }
 
 type selectBuilder struct {
