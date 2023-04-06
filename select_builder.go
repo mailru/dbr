@@ -2,6 +2,7 @@ package dbr
 
 import (
 	"context"
+	"database/sql"
 	"reflect"
 	"time"
 )
@@ -168,6 +169,13 @@ func (b *selectBuilder) LoadStructsContext(ctx context.Context, value interface{
 		b.changeTimezone(reflect.ValueOf(value))
 	}
 	return c, err
+}
+
+// GetRows returns sql.Rows from query result.
+func (b *selectBuilder) GetRows(ctx context.Context) (*sql.Rows, error) {
+	rows, _, err := queryRows(ctx, b.runner, b.EventReceiver, b, b.Dialect)
+
+	return rows, err
 }
 
 // LoadValue loads any value from query result with background context, returns ErrNotFound if there is no result
