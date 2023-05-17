@@ -19,38 +19,39 @@ func Load(rows *sql.Rows, value interface{}) (int, error) {
 	if v.Kind() != reflect.Ptr || v.IsNil() {
 		return 0, ErrInvalidPointer
 	}
+
 	v = v.Elem()
 	isSlice := v.Kind() == reflect.Slice && v.Type().Elem().Kind() != reflect.Uint8
-	count := 0
-	var elemType reflect.Type
+	elem := v
+	elemType := elem.Type()
+
 	if isSlice {
-		elemType = v.Type().Elem()
-	} else {
-		elemType = v.Type()
+		elemType = elemType.Elem()
+		elem = reflect.New(elemType).Elem()
 	}
+
 	extractor, err := findExtractor(elemType)
 	if err != nil {
-		return count, err
+		return 0, err
 	}
+
+	ptrs := extractor(column, elem)
+	count := 0
+
 	for rows.Next() {
-		var elem reflect.Value
-		if isSlice {
-			elem = reflect.New(v.Type().Elem()).Elem()
-		} else {
-			elem = v
-		}
-		ptr := extractor(column, elem)
-		err = rows.Scan(ptr...)
-		if err != nil {
+		if err = rows.Scan(ptrs...); err != nil {
 			return count, err
 		}
+
 		count++
-		if isSlice {
-			v.Set(reflect.Append(v, elem))
-		} else {
+
+		if !isSlice {
 			break
 		}
+
+		v.Set(reflect.Append(v, elem))
 	}
+
 	return count, rows.Err()
 }
 

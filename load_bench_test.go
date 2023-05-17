@@ -7,7 +7,6 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mailru/dbr"
 	"github.com/mailru/dbr/dialect"
-	"github.com/stretchr/testify/assert"
 )
 
 var rawData = getDataSlice(10000)
@@ -25,28 +24,12 @@ func Benchmark_SQLScanWithCap(b *testing.B) {
 }
 
 func Benchmark_DBRLoad(b *testing.B) {
-	dbr.LoadMode = dbr.LoaderDefault
 	for i := 0; i < b.N; i++ {
 		benchDBR(b, rawData, []benchItem{})
 	}
 }
 
 func Benchmark_DBRLoadWithCap(b *testing.B) {
-	dbr.LoadMode = dbr.LoaderDefault
-	for i := 0; i < b.N; i++ {
-		benchDBR(b, rawData, make([]benchItem, 0, len(rawData)))
-	}
-}
-
-func Benchmark_DBRLoadV2(b *testing.B) {
-	dbr.LoadMode = dbr.LoaderV2
-	for i := 0; i < b.N; i++ {
-		benchDBR(b, rawData, []benchItem{})
-	}
-}
-
-func Benchmark_DBRLoadV2WithCap(b *testing.B) {
-	dbr.LoadMode = dbr.LoaderV2
 	for i := 0; i < b.N; i++ {
 		benchDBR(b, rawData, make([]benchItem, 0, len(rawData)))
 	}
@@ -77,7 +60,7 @@ func benchRawSQL(b *testing.B, data []benchItem, res []benchItem) {
 	b.StopTimer()
 	db, mock, err := sqlmock.New()
 	if err != nil {
-		assert.NoError(b, err)
+		panic(err)
 	}
 	mock.ExpectQuery("select").WillReturnRows(getRowsMocked(b, data))
 	b.StartTimer()

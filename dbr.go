@@ -205,25 +205,18 @@ func queryRows(ctx context.Context, runner runner, log EventReceiver, builder Bu
 	return rows, &query, nil
 }
 
-func query(ctx context.Context,
-	runner runner, log EventReceiver, builder Builder, d Dialect, dest interface{},
-) (count int, err error) {
+func query(ctx context.Context, runner runner, log EventReceiver, builder Builder, d Dialect, dest interface{}) (int, error) {
 	rows, query, err := queryRows(ctx, runner, log, builder, d)
 	if err != nil {
 		return 0, err
 	}
 
-	switch LoadMode {
-	case LoaderV2:
-		count, err = LoadV2(rows, dest)
-	default:
-		count, err = Load(rows, dest)
-	}
-
+	count, err := Load(rows, dest)
 	if err != nil {
 		return 0, log.EventErrKv("dbr.select.load.scan", err, kvs{
 			"sql": *query,
 		})
 	}
+
 	return count, nil
 }
