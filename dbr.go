@@ -163,7 +163,7 @@ func exec(ctx context.Context, runner runner, log EventReceiver, builder Builder
 	return result, nil
 }
 
-func queryRows(ctx context.Context, runner runner, log EventReceiver, builder Builder, d Dialect) (*sql.Rows, *string, error) {
+func queryRows(ctx context.Context, runner runner, log EventReceiver, builder Builder, d Dialect) (*sql.Rows, string, error) {
 	i := interpolator{
 		Buffer:       NewBuffer(),
 		Dialect:      d,
@@ -172,7 +172,7 @@ func queryRows(ctx context.Context, runner runner, log EventReceiver, builder Bu
 	err := i.interpolate(placeholder, []interface{}{builder})
 	query, value := i.String(), i.Value()
 	if err != nil {
-		return nil, nil, log.EventErrKv("dbr.select.interpolate", err, kvs{
+		return nil, "", log.EventErrKv("dbr.select.interpolate", err, kvs{
 			"sql":  query,
 			"args": fmt.Sprint(value),
 		})
@@ -197,12 +197,12 @@ func queryRows(ctx context.Context, runner runner, log EventReceiver, builder Bu
 			traceImpl.SpanError(ctx, err)
 		}
 
-		return nil, &query, log.EventErrKv("dbr.select.load.query", err, kvs{
+		return nil, query, log.EventErrKv("dbr.select.load.query", err, kvs{
 			"sql": query,
 		})
 	}
 
-	return rows, &query, nil
+	return rows, query, nil
 }
 
 func query(ctx context.Context, runner runner, log EventReceiver, builder Builder, d Dialect, dest interface{}) (int, error) {
@@ -214,7 +214,7 @@ func query(ctx context.Context, runner runner, log EventReceiver, builder Builde
 	count, err := Load(rows, dest)
 	if err != nil {
 		return 0, log.EventErrKv("dbr.select.load.scan", err, kvs{
-			"sql": *query,
+			"sql": query,
 		})
 	}
 
