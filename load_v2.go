@@ -5,11 +5,11 @@ import (
 	"reflect"
 )
 
-type loadType string
+type loadType uint16
 
 const (
-	LoaderDefault loadType = ""
-	LoaderV2      loadType = "loaderV2"
+	LoaderDefault loadType = iota
+	LoaderV2
 )
 
 var LoadMode = LoaderDefault
