@@ -1,2 +1,3 @@
 .idea/*
+/.devcontainer
 .DS_Store
