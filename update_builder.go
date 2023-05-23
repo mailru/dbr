@@ -25,6 +25,7 @@ type updateBuilder struct {
 	Dialect    Dialect
 	updateStmt *updateStmt
 	LimitCount int64
+	ctx        context.Context
 }
 
 // Update creates a UpdateBuilder
@@ -35,6 +36,7 @@ func (sess *Session) Update(table string) UpdateBuilder {
 		Dialect:       sess.Dialect,
 		updateStmt:    createUpdateStmt(table),
 		LimitCount:    -1,
+		ctx:           sess.ctx,
 	}
 }
 
@@ -46,6 +48,7 @@ func (tx *Tx) Update(table string) UpdateBuilder {
 		Dialect:       tx.Dialect,
 		updateStmt:    createUpdateStmt(table),
 		LimitCount:    -1,
+		ctx:           tx.ctx,
 	}
 }
 
@@ -57,6 +60,7 @@ func (sess *Session) UpdateBySql(query string, value ...interface{}) UpdateBuild
 		Dialect:       sess.Dialect,
 		updateStmt:    createUpdateStmtBySQL(query, value),
 		LimitCount:    -1,
+		ctx:           sess.ctx,
 	}
 }
 
@@ -68,12 +72,13 @@ func (tx *Tx) UpdateBySql(query string, value ...interface{}) UpdateBuilder {
 		Dialect:       tx.Dialect,
 		updateStmt:    createUpdateStmtBySQL(query, value),
 		LimitCount:    -1,
+		ctx:           tx.ctx,
 	}
 }
 
 // Exec executes the stmt with background context
 func (b *updateBuilder) Exec() (sql.Result, error) {
-	return b.ExecContext(context.Background())
+	return b.ExecContext(b.ctx)
 }
 
 // ExecContext executes the stmt

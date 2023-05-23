@@ -46,6 +46,7 @@ type selectBuilder struct {
 	Dialect    Dialect
 	selectStmt *selectStmt
 	timezone   *time.Location
+	ctx        context.Context
 }
 
 func prepareSelect(a []string) []interface{} {
@@ -63,6 +64,7 @@ func (sess *Session) Select(column ...string) SelectBuilder {
 		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		selectStmt:    createSelectStmt(prepareSelect(column)),
+		ctx:           sess.ctx,
 	}
 }
 
@@ -73,6 +75,7 @@ func (tx *Tx) Select(column ...string) SelectBuilder {
 		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		selectStmt:    createSelectStmt(prepareSelect(column)),
+		ctx:           tx.ctx,
 	}
 }
 
@@ -83,6 +86,7 @@ func (sess *Session) SelectBySql(query string, value ...interface{}) SelectBuild
 		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		selectStmt:    createSelectStmtBySQL(query, value),
+		ctx:           sess.ctx,
 	}
 }
 
@@ -93,6 +97,7 @@ func (tx *Tx) SelectBySql(query string, value ...interface{}) SelectBuilder {
 		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		selectStmt:    createSelectStmtBySQL(query, value),
+		ctx:           tx.ctx,
 	}
 }
 
@@ -126,7 +131,7 @@ func (b *selectBuilder) Build(d Dialect, buf Buffer) error {
 
 // Load loads any value from query result with background context
 func (b *selectBuilder) Load(value interface{}) (int, error) {
-	return b.LoadContext(context.Background(), value)
+	return b.LoadContext(b.ctx, value)
 }
 
 // LoadContext loads any value from query result
@@ -140,7 +145,7 @@ func (b *selectBuilder) LoadContext(ctx context.Context, value interface{}) (int
 
 // LoadStruct loads struct from query result with background context, returns ErrNotFound if there is no result
 func (b *selectBuilder) LoadStruct(value interface{}) error {
-	return b.LoadStructContext(context.Background(), value)
+	return b.LoadStructContext(b.ctx, value)
 }
 
 // LoadStructContext loads struct from query result, returns ErrNotFound if there is no result
@@ -160,7 +165,7 @@ func (b *selectBuilder) LoadStructContext(ctx context.Context, value interface{}
 
 // LoadStructs loads structures from query result with background context
 func (b *selectBuilder) LoadStructs(value interface{}) (int, error) {
-	return b.LoadStructsContext(context.Background(), value)
+	return b.LoadStructsContext(b.ctx, value)
 }
 
 // LoadStructsContext loads structures from query result
@@ -181,7 +186,7 @@ func (b *selectBuilder) GetRows(ctx context.Context) (*sql.Rows, error) {
 
 // LoadValue loads any value from query result with background context, returns ErrNotFound if there is no result
 func (b *selectBuilder) LoadValue(value interface{}) error {
-	return b.LoadValueContext(context.Background(), value)
+	return b.LoadValueContext(b.ctx, value)
 }
 
 // LoadValueContext loads any value from query result, returns ErrNotFound if there is no result
@@ -201,7 +206,7 @@ func (b *selectBuilder) LoadValueContext(ctx context.Context, value interface{})
 
 // LoadValues loads any values from query result with background context
 func (b *selectBuilder) LoadValues(value interface{}) (int, error) {
-	return b.LoadValuesContext(context.Background(), value)
+	return b.LoadValuesContext(b.ctx, value)
 }
 
 // LoadValuesContext loads any values from query result
