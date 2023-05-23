@@ -36,7 +36,8 @@ type SelectBuilder interface {
 	RightJoin(table, on interface{}) SelectBuilder
 	SkipLocked() SelectBuilder
 	Where(query interface{}, value ...interface{}) SelectBuilder
-	GetRows(context.Context) (*sql.Rows, error)
+	GetRows() (*sql.Rows, error)
+	GetRowsContext(context.Context) (*sql.Rows, error)
 }
 
 type selectBuilder struct {
@@ -178,7 +179,12 @@ func (b *selectBuilder) LoadStructsContext(ctx context.Context, value interface{
 }
 
 // GetRows returns sql.Rows from query result.
-func (b *selectBuilder) GetRows(ctx context.Context) (*sql.Rows, error) {
+func (b *selectBuilder) GetRows() (*sql.Rows, error) {
+	return b.GetRowsContext(b.ctx)
+}
+
+// GetRowsContext returns sql.Rows from query result.
+func (b *selectBuilder) GetRowsContext(ctx context.Context) (*sql.Rows, error) {
 	rows, _, err := queryRows(ctx, b.runner, b.EventReceiver, b, b.Dialect)
 
 	return rows, err
