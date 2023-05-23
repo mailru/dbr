@@ -29,7 +29,19 @@ func Benchmark_DBRLoad(b *testing.B) {
 	}
 }
 
+func Benchmark_DBRLoadPtrs(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		benchDBRPtrs(b, rawData, []*benchItem{})
+	}
+}
+
 func Benchmark_DBRLoadWithCap(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		benchDBR(b, rawData, make([]benchItem, 0, len(rawData)))
+	}
+}
+
+func Benchmark_DBRLoadPtrsWithCap(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		benchDBR(b, rawData, make([]benchItem, 0, len(rawData)))
 	}
@@ -80,6 +92,18 @@ func benchRawSQL(b *testing.B, data []benchItem, res []benchItem) {
 }
 
 func benchDBR(b *testing.B, data []benchItem, res []benchItem) {
+	b.StopTimer()
+	sess, dbmock := getDBRMock(dialect.MySQL)
+	dbmock.ExpectQuery("SELECT field1, field2 FROM sometable").WillReturnRows(getRowsMocked(b, data))
+	rows := sess.Select("field1", "field2").From("sometable")
+	b.StartTimer()
+
+	if _, err := rows.LoadStructs(&res); err != nil {
+		panic(err)
+	}
+}
+
+func benchDBRPtrs(b *testing.B, data []benchItem, res []*benchItem) {
 	b.StopTimer()
 	sess, dbmock := getDBRMock(dialect.MySQL)
 	dbmock.ExpectQuery("SELECT field1, field2 FROM sometable").WillReturnRows(getRowsMocked(b, data))
