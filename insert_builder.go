@@ -27,6 +27,7 @@ type insertBuilder struct {
 	Dialect    Dialect
 	RecordID   reflect.Value
 	insertStmt *insertStmt
+	ctx        context.Context
 }
 
 // InsertInto creates a InsertBuilder
@@ -36,6 +37,7 @@ func (sess *Session) InsertInto(table string) InsertBuilder {
 		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		insertStmt:    createInsertStmt(table),
+		ctx:           sess.ctx,
 	}
 }
 
@@ -46,6 +48,7 @@ func (tx *Tx) InsertInto(table string) InsertBuilder {
 		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		insertStmt:    createInsertStmt(table),
+		ctx:           tx.ctx,
 	}
 }
 
@@ -56,6 +59,7 @@ func (sess *Session) InsertBySql(query string, value ...interface{}) InsertBuild
 		EventReceiver: sess.EventReceiver,
 		Dialect:       sess.Dialect,
 		insertStmt:    createInsertStmtBySQL(query, value),
+		ctx:           sess.ctx,
 	}
 }
 
@@ -66,6 +70,7 @@ func (tx *Tx) InsertBySql(query string, value ...interface{}) InsertBuilder {
 		EventReceiver: tx.EventReceiver,
 		Dialect:       tx.Dialect,
 		insertStmt:    createInsertStmtBySQL(query, value),
+		ctx:           tx.ctx,
 	}
 }
 
@@ -89,7 +94,7 @@ func (b *insertBuilder) Pair(column string, value interface{}) InsertBuilder {
 
 // Exec executes the stmt with background context
 func (b *insertBuilder) Exec() (sql.Result, error) {
-	return b.ExecContext(context.Background())
+	return b.ExecContext(b.ctx)
 }
 
 // ExecContext executes the stmt
