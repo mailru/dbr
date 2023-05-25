@@ -1,7 +1,9 @@
 package dbr
 
 import (
+	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -91,4 +93,101 @@ func newSessionMock() (SessionRunner, sqlmock.Sqlmock) {
 	}
 	conn := Connection{DB: db, Dialect: dialect.MySQL, EventReceiver: nullReceiver}
 	return conn.NewSession(nil), m
+}
+
+func Test_Load_Scalar(t *testing.T) {
+	t.Parallel()
+	var res int
+	_, err := Load(sqlRows(t, sqlmock.NewRows([]string{"cnt"}).AddRow(123)), &res)
+	assert.NoError(t, err)
+	assert.EqualValues(t, 123, res)
+}
+
+func Test_Load_ScalarPtr(t *testing.T) {
+	t.Parallel()
+	var res *int
+	_, err := Load(sqlRows(t, sqlmock.NewRows([]string{"cnt"}).AddRow(123)), &res)
+	assert.NoError(t, err)
+	expected := new(int)
+	*expected = 123
+	assert.EqualValues(t, expected, res)
+}
+
+func Test_Load_ScalarSlice(t *testing.T) {
+	t.Parallel()
+	var res []int
+	_, err := Load(sqlRows(t, sqlmock.NewRows([]string{"cnt"}).AddRow(111).AddRow(222).AddRow(333)), &res)
+	assert.NoError(t, err)
+	assert.EqualValues(t, []int{111, 222, 333}, res)
+}
+
+func Test_Load_ScalarSlicePtr(t *testing.T) {
+	t.Parallel()
+	var expected, actual []*int
+	_, err := Load(sqlRows(t, sqlmock.NewRows([]string{"cnt"}).AddRow(0).AddRow(1).AddRow(2)), &actual)
+	assert.NoError(t, err)
+	for k := range make([]int, 3) {
+		k := k
+		expected = append(expected, &k)
+	}
+	assert.EqualValues(t, expected, actual)
+}
+
+type testObj struct {
+	Field1 string
+	Field2 int
+}
+
+func Test_Load_Struct(t *testing.T) {
+	t.Parallel()
+	var res testObj
+	_, err := Load(sqlRows(t, sqlmock.NewRows([]string{"field1", "field2"}).AddRow("111", 222)), &res)
+	assert.NoError(t, err)
+	assert.EqualValues(t, testObj{"111", 222}, res)
+}
+
+func Test_Load_StructPtr(t *testing.T) {
+	t.Parallel()
+	res := &testObj{}
+	_, err := Load(sqlRows(t, sqlmock.NewRows([]string{"field1", "field2"}).AddRow("111", 222)), &res)
+	assert.NoError(t, err)
+	assert.EqualValues(t, &testObj{"111", 222}, res)
+}
+
+func Test_Load_StructSlice(t *testing.T) {
+	t.Parallel()
+	var res []testObj
+	_, err := Load(sqlRows(t, sqlmock.NewRows([]string{"field1", "field2"}).AddRow("111", 222).AddRow("222", 333)), &res)
+	assert.NoError(t, err)
+	assert.EqualValues(t, []testObj{{"111", 222}, {"222", 333}}, res)
+}
+
+func Test_Load_StructSlicePtr(t *testing.T) {
+	t.Parallel()
+	var expected, actual []*testObj
+	_, err := Load(sqlRows(t, sqlmock.NewRows([]string{"field1", "field2"}).AddRow("0", 0).AddRow("1", 1)), &actual)
+	assert.NoError(t, err)
+	for k := range make([]int, 2) {
+		k := k
+		expected = append(expected, &testObj{fmt.Sprint(k), k})
+	}
+	assert.EqualValues(t, expected, actual)
+}
+
+func sqlRows(t *testing.T, mockedRows *sqlmock.Rows) *sql.Rows {
+	t.Helper()
+
+	db, dbmock, err := sqlmock.New()
+	if err != nil {
+		t.Error(err)
+	}
+
+	dbmock.ExpectQuery("select").WillReturnRows(mockedRows)
+
+	rows, err := db.Query("select")
+	if err != nil {
+		t.Error(err)
+	}
+
+	return rows
 }

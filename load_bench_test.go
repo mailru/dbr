@@ -29,7 +29,19 @@ func Benchmark_DBRLoad(b *testing.B) {
 	}
 }
 
+func Benchmark_DBRLoadPtrs(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		benchDBRPtrs(b, rawData, []*benchItem{})
+	}
+}
+
 func Benchmark_DBRLoadWithCap(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		benchDBR(b, rawData, make([]benchItem, 0, len(rawData)))
+	}
+}
+
+func Benchmark_DBRLoadPtrsWithCap(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		benchDBR(b, rawData, make([]benchItem, 0, len(rawData)))
 	}
@@ -60,20 +72,20 @@ func benchRawSQL(b *testing.B, data []benchItem, res []benchItem) {
 	b.StopTimer()
 	db, mock, err := sqlmock.New()
 	if err != nil {
-		panic(err)
+		b.Error(err)
 	}
 	mock.ExpectQuery("select").WillReturnRows(getRowsMocked(b, data))
 	b.StartTimer()
 
 	rows, err := db.Query("select")
 	if err != nil {
-		panic(err)
+		b.Error(err)
 	}
 
 	var item benchItem
 	for rows.Next() {
 		if err := rows.Scan(&item.Field1, &item.Field2); err != nil {
-			panic(err)
+			b.Error(err)
 		}
 		res = append(res, item)
 	}
@@ -81,20 +93,32 @@ func benchRawSQL(b *testing.B, data []benchItem, res []benchItem) {
 
 func benchDBR(b *testing.B, data []benchItem, res []benchItem) {
 	b.StopTimer()
-	sess, dbmock := getDBRMock(dialect.MySQL)
+	sess, dbmock := getDBRMock(b, dialect.MySQL)
 	dbmock.ExpectQuery("SELECT field1, field2 FROM sometable").WillReturnRows(getRowsMocked(b, data))
 	rows := sess.Select("field1", "field2").From("sometable")
 	b.StartTimer()
 
 	if _, err := rows.LoadStructs(&res); err != nil {
-		panic(err)
+		b.Error(err)
 	}
 }
 
-func getDBRMock(dialect dbr.Dialect) (*dbr.Session, sqlmock.Sqlmock) {
+func benchDBRPtrs(b *testing.B, data []benchItem, res []*benchItem) {
+	b.StopTimer()
+	sess, dbmock := getDBRMock(b, dialect.MySQL)
+	dbmock.ExpectQuery("SELECT field1, field2 FROM sometable").WillReturnRows(getRowsMocked(b, data))
+	rows := sess.Select("field1", "field2").From("sometable")
+	b.StartTimer()
+
+	if _, err := rows.LoadStructs(&res); err != nil {
+		b.Error(err)
+	}
+}
+
+func getDBRMock(b *testing.B, dialect dbr.Dialect) (*dbr.Session, sqlmock.Sqlmock) {
 	db, dbmock, err := sqlmock.New()
 	if err != nil {
-		panic(err)
+		b.Error(err)
 	}
 
 	conn := dbr.Connection{DB: db, Dialect: dialect, EventReceiver: &dbr.NullEventReceiver{}}

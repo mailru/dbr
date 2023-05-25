@@ -23,6 +23,7 @@ type deleteBuilder struct {
 	Dialect    Dialect
 	deleteStmt *deleteStmt
 	LimitCount int64
+	ctx        context.Context
 }
 
 // DeleteFrom creates a DeleteBuilder
@@ -33,6 +34,7 @@ func (sess *Session) DeleteFrom(table string) DeleteBuilder {
 		Dialect:       sess.Dialect,
 		deleteStmt:    createDeleteStmt(table),
 		LimitCount:    -1,
+		ctx:           sess.ctx,
 	}
 }
 
@@ -44,6 +46,7 @@ func (tx *Tx) DeleteFrom(table string) DeleteBuilder {
 		Dialect:       tx.Dialect,
 		deleteStmt:    createDeleteStmt(table),
 		LimitCount:    -1,
+		ctx:           tx.ctx,
 	}
 }
 
@@ -55,6 +58,7 @@ func (sess *Session) DeleteBySql(query string, value ...interface{}) DeleteBuild
 		Dialect:       sess.Dialect,
 		deleteStmt:    createDeleteStmtBySQL(query, value),
 		LimitCount:    -1,
+		ctx:           sess.ctx,
 	}
 }
 
@@ -66,12 +70,13 @@ func (tx *Tx) DeleteBySql(query string, value ...interface{}) DeleteBuilder {
 		Dialect:       tx.Dialect,
 		deleteStmt:    createDeleteStmtBySQL(query, value),
 		LimitCount:    -1,
+		ctx:           tx.ctx,
 	}
 }
 
 // Exec executes the stmt with background context
 func (b *deleteBuilder) Exec() (sql.Result, error) {
-	return b.ExecContext(context.Background())
+	return b.ExecContext(b.ctx)
 }
 
 // ExecContext executes the stmt

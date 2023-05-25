@@ -49,7 +49,13 @@ func Load(rows *sql.Rows, value interface{}) (int, error) {
 			break
 		}
 
-		v.Set(reflect.Append(v, elem))
+		if elemType.Kind() == reflect.Ptr {
+			elemCopy := reflect.New(elemType.Elem()).Elem()
+			elemCopy.Set(elem.Elem())
+			v.Set(reflect.Append(v, elemCopy.Addr()))
+		} else {
+			v.Set(reflect.Append(v, elem))
+		}
 	}
 
 	return count, rows.Err()
