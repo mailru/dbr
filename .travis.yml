@@ -4,8 +4,10 @@ notifications:
   email: false
 
 go:
-  - "1.11"
-  - "1.12"
+  - "1.13"
+  - "1.14"
+  - "1.15"
+  - "1.16"
 
 env:
   - GO111MODULE=on
@@ -22,8 +24,9 @@ services:
   - docker
 
 before_install:
-  - travis_retry docker pull yandex/clickhouse-server
-  - docker run -d -p 127.0.0.1:8123:8123 --name dbr-clickhouse-server yandex/clickhouse-server
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+  - travis_retry docker pull yandex/clickhouse-server:latest
+  - docker run -d -p 127.0.0.1:8123:8123 --name dbr-clickhouse-server yandex/clickhouse-server:latest
 
 install:
   - travis_retry go get github.com/mattn/goveralls
