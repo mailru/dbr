@@ -22,8 +22,8 @@ services:
   - docker
 
 before_install:
-  - travis_retry docker pull yandex/clickhouse-server
-  - docker run -d -p 127.0.0.1:8123:8123 --name dbr-clickhouse-server yandex/clickhouse-server
+  - travis_retry docker pull clickhouse/clickhouse-server
+  - docker run -d -p 127.0.0.1:8123:8123 --name dbr-clickhouse-server clickhouse/clickhouse-server
 
 install:
   - travis_retry go get github.com/mattn/goveralls
