@@ -3,7 +3,6 @@ package dbr
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"time"
 
@@ -28,7 +27,7 @@ func Open(driver, dsn string, log EventReceiver) (*Connection, error) {
 		d = dialect.PostgreSQL
 	case "sqlite3":
 		d = dialect.SQLite3
-	case "clickhouse":
+	case "clickhouse", "chhttp":
 		d = dialect.ClickHouse
 	default:
 		return nil, ErrNotSupported
@@ -98,21 +97,15 @@ type SessionRunner interface {
 
 // DBConn interface for sql.DB
 type DBConn interface {
+	runner
+
 	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
 	Begin() (*sql.Tx, error)
 
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
-
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-	QueryRow(query string, args ...interface{}) *sql.Row
+	PingContext(ctx context.Context) error
+	Ping() error
 
 	Stats() sql.DBStats
-	Driver() driver.Driver
-	Conn(ctx context.Context) (*sql.Conn, error)
 	Close() error
 }
 
@@ -122,6 +115,9 @@ type runner interface {
 
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+
+	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 }
 
 // Executer can execute requests to database
