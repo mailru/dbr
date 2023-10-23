@@ -91,7 +91,7 @@ func newSessionMock() (SessionRunner, sqlmock.Sqlmock) {
 	if err != nil {
 		panic(err)
 	}
-	conn := Connection{DB: db, Dialect: dialect.MySQL, EventReceiver: nullReceiver}
+	conn := Connection{DBConn: db, Dialect: dialect.MySQL, EventReceiver: nullReceiver}
 	return conn.NewSession(nil), m
 }
 

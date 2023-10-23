@@ -121,7 +121,7 @@ func getDBRMock(b *testing.B, dialect dbr.Dialect) (*dbr.Session, sqlmock.Sqlmoc
 		b.Error(err)
 	}
 
-	conn := dbr.Connection{DB: db, Dialect: dialect, EventReceiver: &dbr.NullEventReceiver{}}
+	conn := dbr.Connection{DBConn: db, Dialect: dialect, EventReceiver: &dbr.NullEventReceiver{}}
 
 	return conn.NewSession(conn.EventReceiver), dbmock
 }
