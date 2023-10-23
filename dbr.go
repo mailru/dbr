@@ -3,6 +3,7 @@ package dbr
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"time"
 
@@ -109,6 +110,9 @@ type DBConn interface {
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 	QueryRow(query string, args ...interface{}) *sql.Row
 
+	Stats() sql.DBStats
+	Driver() driver.Driver
+	Conn(ctx context.Context) (*sql.Conn, error)
 	Close() error
 }
 
