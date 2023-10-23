@@ -32,7 +32,7 @@ func Open(driver, dsn string, log EventReceiver) (*Connection, error) {
 	default:
 		return nil, ErrNotSupported
 	}
-	return &Connection{DB: conn, EventReceiver: log, Dialect: d}, nil
+	return &Connection{DBConn: conn, EventReceiver: log, Dialect: d}, nil
 }
 
 const (
@@ -42,7 +42,7 @@ const (
 // Connection is a connection to the database with an EventReceiver
 // to send events, errors, and timings to
 type Connection struct {
-	*sql.DB
+	DBConn
 	Dialect Dialect
 	EventReceiver
 }
@@ -93,6 +93,23 @@ type SessionRunner interface {
 
 	DeleteFrom(table string) DeleteBuilder
 	DeleteBySql(query string, value ...interface{}) DeleteBuilder
+}
+
+// DBConn interface for sql.DB
+type DBConn interface {
+	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
+	Begin() (*sql.Tx, error)
+
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	Exec(query string, args ...interface{}) (sql.Result, error)
+
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	QueryRow(query string, args ...interface{}) *sql.Row
+
+	Close() error
 }
 
 type runner interface {
