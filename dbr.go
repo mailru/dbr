@@ -27,12 +27,12 @@ func Open(driver, dsn string, log EventReceiver) (*Connection, error) {
 		d = dialect.PostgreSQL
 	case "sqlite3":
 		d = dialect.SQLite3
-	case "clickhouse":
+	case "clickhouse", "chhttp":
 		d = dialect.ClickHouse
 	default:
 		return nil, ErrNotSupported
 	}
-	return &Connection{DB: conn, EventReceiver: log, Dialect: d}, nil
+	return &Connection{DBConn: conn, EventReceiver: log, Dialect: d}, nil
 }
 
 const (
@@ -42,7 +42,7 @@ const (
 // Connection is a connection to the database with an EventReceiver
 // to send events, errors, and timings to
 type Connection struct {
-	*sql.DB
+	DBConn
 	Dialect Dialect
 	EventReceiver
 }
@@ -95,12 +95,29 @@ type SessionRunner interface {
 	DeleteBySql(query string, value ...interface{}) DeleteBuilder
 }
 
+// DBConn interface for sql.DB
+type DBConn interface {
+	runner
+
+	BeginTx(context.Context, *sql.TxOptions) (*sql.Tx, error)
+	Begin() (*sql.Tx, error)
+
+	PingContext(ctx context.Context) error
+	Ping() error
+
+	Stats() sql.DBStats
+	Close() error
+}
+
 type runner interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+
+	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 }
 
 // Executer can execute requests to database
